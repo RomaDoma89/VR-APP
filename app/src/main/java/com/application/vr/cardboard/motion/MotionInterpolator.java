@@ -1,6 +1,6 @@
-package com.application.vr.cardboard;
+package com.application.vr.cardboard.motion;
 
-public class SensorInterpolator {
+public class MotionInterpolator {
 
     private float [] accelerometer = {0.0f, 0.0f, 0.0f};
 

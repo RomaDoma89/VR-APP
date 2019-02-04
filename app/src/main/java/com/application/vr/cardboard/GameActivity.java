@@ -4,19 +4,20 @@ import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 
+import com.application.vr.cardboard.render.SceneRenderer;
 import com.google.vr.sdk.base.GvrActivity;
 import com.google.vr.sdk.base.GvrView;
 
 
-public class MainActivity extends GvrActivity {
+public class GameActivity extends GvrActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.common_ui);
+        setContentView(R.layout.activity_game);
 
         SensorManager mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
-        Sensor accelerom = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        Sensor accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         Sensor magnetic = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
         //Prepare View
@@ -25,7 +26,7 @@ public class MainActivity extends GvrActivity {
         setGvrView(gvrView);
 
         //Prepare renderer
-        SceneRenderer mRenderer = new SceneRenderer(mSensorManager, accelerom, magnetic);
+        SceneRenderer mRenderer = new SceneRenderer(getApplicationContext(), mSensorManager, accelerometer, magnetic);
         gvrView.setRenderer(mRenderer);
     }
 

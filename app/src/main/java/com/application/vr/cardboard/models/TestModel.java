@@ -14,7 +14,6 @@ import com.application.vr.cardboard.file_utils.ShaderUtils;
 
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_LINES;
-import static android.opengl.GLES20.GL_TRIANGLES;
 import static android.opengl.GLES20.glDrawArrays;
 import static android.opengl.GLES20.glLineWidth;
 import static android.opengl.GLES20.glUniform4f;
@@ -77,21 +76,21 @@ public class TestModel {
 
     private void prepareData() {
         float l = 3;
-        float xScale1 = 0f;  // удаление по оси X
-        float yScale1 = 0f;  // удаление по оси Y
-        float zScale1 = 10f;  // удаление по оси Z
+        float xScale1 = 10f;  // удаление по оси X
+        float yScale1 = 10f;  // удаление по оси Y
+        float zScale1 = 190f;  // удаление по оси Z
 
         float xScale2 = 0f;  // удаление по оси X
-        float yScale2 = -10f;  // удаление по оси Y
+        float yScale2 = -190f;  // удаление по оси Y
         float zScale2 = 0f;  // удаление по оси Z
 
         float xScale3 = 0f;  // удаление по оси X
-        float yScale3 = 10f;  // удаление по оси Y
+        float yScale3 = 190f;  // удаление по оси Y
         float zScale3 = 0f;  // удаление по оси Z
 
         float xScale4 = 0f;  // удаление по оси X
         float yScale4 = 0f;  // удаление по оси Y
-        float zScale4 = -10f;  // удаление по оси Z
+        float zScale4 = -190f;  // удаление по оси Z
 
         float[] vertices = {
                 // Отдоление от 0,0,0 по оси Z+  = Спереди
@@ -138,32 +137,32 @@ public class TestModel {
                 xScale4,yScale4,-l+zScale4,
                 xScale4,yScale4,l+zScale4,
 
-                //triangles BACK  parallel to XY plane GREEN !!!!!!!!!!!
-                -0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
-                -0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
-                0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
-
-                -0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
-                0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
-                0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
-
-                //triangles TOP parallel to XZ plane PURPLE !!!!!
-                -0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
-                -0.5f+xScale1, 0.5f+yScale1, zScale1-3.5f,
-                0.5f+xScale1, 0.5f+yScale1, zScale1-3.5f,
-
-                -0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
-                0.5f+xScale1, 0.5f+yScale1, zScale1-3.5f,
-                0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
-
-                //triangles BOTTOM parallel to XZ plane YELLOW !!!!!
-                -0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
-                -0.5f+xScale1, -0.5f+yScale1, zScale1-3.5f,
-                0.5f+xScale1, -0.5f+yScale1, zScale1-3.5f,
-
-                -0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
-                0.5f+xScale1, -0.5f+yScale1, zScale1-3.5f,
-                0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
+//                //triangles BACK  parallel to XY plane GREEN !!!!!!!!!!!
+//                -0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
+//                -0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
+//                0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
+//
+//                -0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
+//                0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
+//                0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
+//
+//                //triangles TOP parallel to XZ plane PURPLE !!!!!
+//                -0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
+//                -0.5f+xScale1, 0.5f+yScale1, zScale1-3.5f,
+//                0.5f+xScale1, 0.5f+yScale1, zScale1-3.5f,
+//
+//                -0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
+//                0.5f+xScale1, 0.5f+yScale1, zScale1-3.5f,
+//                0.5f+xScale1, 0.5f+yScale1, zScale1+0.5f,
+//
+//                //triangles BOTTOM parallel to XZ plane YELLOW !!!!!
+//                -0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
+//                -0.5f+xScale1, -0.5f+yScale1, zScale1-3.5f,
+//                0.5f+xScale1, -0.5f+yScale1, zScale1-3.5f,
+//
+//                -0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
+//                0.5f+xScale1, -0.5f+yScale1, zScale1-3.5f,
+//                0.5f+xScale1, -0.5f+yScale1, zScale1+0.5f,
         };
 
         vertexData = ByteBuffer
@@ -178,7 +177,7 @@ public class TestModel {
         glLineWidth(1);
 
         // x axis                      BLUE !!!!!!!!!!!
-        glUniform4f(mColorHandle, 0.0f, 1.0f, 1.0f, 1.0f);
+        glUniform4f(mColorHandle, 1.0f, 1.0f, 1.0f, 1.0f);
         glDrawArrays(GL_LINES, 0, 2);
         // y axis                      PINK !!!!!!!!!!!
         glUniform4f(mColorHandle, 0.0f, 1.0f, 1.0f, 1.0f);
@@ -217,22 +216,22 @@ public class TestModel {
         glUniform4f(mColorHandle, 1f, 0f, 0f, 1.0f);
         glDrawArrays(GL_LINES, 22, 2);
 
-        //BACK SQUARE  GREEN !!!!!!!!!!!
-        glUniform4f(mColorHandle, 0.5f, 1f, 0.5f, 1.0f);
-        glDrawArrays(GL_TRIANGLES, 24, 3);
-        glUniform4f(mColorHandle, 0.5f, 1f, 0.5f, 1.0f);
-        glDrawArrays(GL_TRIANGLES, 27, 3);
-
-        //TOP SQUARE  PURPLE !!!!!
-        glUniform4f(mColorHandle, 0.5f, 0.5f, 1f, 1.0f);
-        glDrawArrays(GL_TRIANGLES, 30, 3);
-        glUniform4f(mColorHandle, 0.5f, 0.5f, 1f, 1.0f);
-        glDrawArrays(GL_TRIANGLES, 33, 3);
-
-        //BOTTOM SQUARE YELLOW !!!!!
-        glUniform4f(mColorHandle, 1f, 1f, 0.5f, 1.0f);
-        glDrawArrays(GL_TRIANGLES, 36, 3);
-        glUniform4f(mColorHandle, 1f, 1f, 0.5f, 1.0f);
-        glDrawArrays(GL_TRIANGLES, 39, 3);
+//        //BACK SQUARE  GREEN !!!!!!!!!!!
+//        glUniform4f(mColorHandle, 0.5f, 1f, 0.5f, 1.0f);
+//        glDrawArrays(GL_TRIANGLES, 24, 3);
+//        glUniform4f(mColorHandle, 0.5f, 1f, 0.5f, 1.0f);
+//        glDrawArrays(GL_TRIANGLES, 27, 3);
+//
+//        //TOP SQUARE  PURPLE !!!!!
+//        glUniform4f(mColorHandle, 0.5f, 0.5f, 1f, 1.0f);
+//        glDrawArrays(GL_TRIANGLES, 30, 3);
+//        glUniform4f(mColorHandle, 0.5f, 0.5f, 1f, 1.0f);
+//        glDrawArrays(GL_TRIANGLES, 33, 3);
+//
+//        //BOTTOM SQUARE YELLOW !!!!!
+//        glUniform4f(mColorHandle, 1f, 1f, 0.5f, 1.0f);
+//        glDrawArrays(GL_TRIANGLES, 36, 3);
+//        glUniform4f(mColorHandle, 1f, 1f, 0.5f, 1.0f);
+//        glDrawArrays(GL_TRIANGLES, 39, 3);
     }
 }

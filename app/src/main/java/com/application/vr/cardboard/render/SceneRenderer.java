@@ -7,6 +7,8 @@ import android.opengl.GLES30;
 import android.opengl.Matrix;
 import android.util.Log;
 
+import com.application.vr.cardboard.FPSCounter;
+import com.application.vr.cardboard.models.StarsModel;
 import com.application.vr.cardboard.models.TestModel;
 import com.application.vr.cardboard.motion.DeviceSensorListener;
 import com.application.vr.cardboard.motion.MotionCalculator;
@@ -22,11 +24,13 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     private Context context;
     private DeviceSensorListener sensorListener;
     private MotionCalculator mCalculator;
+    private FPSCounter fpsCounter;
 
     private static final float Z_NEAR = 1f;
-    private static final float Z_FAR = 100.0f;
+    private static final float Z_FAR = 1100.0f;
 
     private TestModel mModel;
+    private StarsModel stars;
 
     // mVPMatrix is an abbreviation for "View Projection Matrix"
     private final float[] mVPMatrix = new float[16];
@@ -38,6 +42,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         this.context = context;
         sensorListener = new DeviceSensorListener(mSensorManage, accelerom, magnetic);
         mCalculator = new MotionCalculator(sensorListener);
+        fpsCounter = new FPSCounter();
     }
 
     @Override
@@ -68,12 +73,16 @@ public class SceneRenderer implements GvrView.StereoRenderer {
 
         //Apply mProjectionMatrix and the updated mViewMatrix.
         Matrix.multiplyMM(mVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
+
+        // Log FPS
+        fpsCounter.logFrame();
     }
 
     @Override
     public void onDrawEye(Eye eye) {
         // Draw square
         mModel.draw(mVPMatrix);
+        stars.draw(mVPMatrix);
     }
 
     @Override
@@ -83,6 +92,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         // Set identity to the rotationMatrix only once.
         Matrix.setIdentityM(rotationMatrix, 0);
         mModel = new TestModel(context);
+        stars = new StarsModel(context);
     }
 
     @Override

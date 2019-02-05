@@ -8,9 +8,7 @@ import android.hardware.SensorManager;
 public class DeviceSensorListener implements SensorEventListener {
 
     private MotionInterpolator interpolator;
-    private float x;
-    private float y;
-    private float z;
+    private float[] updatedValues = new float[3];
 
     public DeviceSensorListener(SensorManager mSensorManage, Sensor accelerom, Sensor magnetic) {
         interpolator = new MotionInterpolator();
@@ -21,10 +19,7 @@ public class DeviceSensorListener implements SensorEventListener {
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            float[] updatedValues = interpolator.interpolate(event.values);
-            x = updatedValues[0];
-            y = updatedValues[1];
-            z = updatedValues[2];
+            updatedValues = interpolator.interpolate(event.values);
         }
     }
 
@@ -32,12 +27,12 @@ public class DeviceSensorListener implements SensorEventListener {
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     public float getX() {
-        return x;
+        return updatedValues[0];
     }
     public float getY() {
-        return y;
+        return updatedValues[1];
     }
     public float getZ() {
-        return z;
+        return updatedValues[2];
     }
 }

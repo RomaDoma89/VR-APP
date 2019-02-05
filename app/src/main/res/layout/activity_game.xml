@@ -11,6 +11,14 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true" />
+        android:layout_alignParentLeft="true">
+
+        <ImageButton
+            android:id="@+id/stereo_mono_switch"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:layout_gravity="top|end"
+            android:background="@android:drawable/ic_menu_view"/>
+    </com.google.vr.sdk.base.GvrView>
 
 </RelativeLayout>

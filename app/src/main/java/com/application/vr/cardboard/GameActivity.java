@@ -27,7 +27,6 @@ public class GameActivity extends GvrActivity {
         GvrView gvrView = findViewById(R.id.gvr_view);
         gvrView.setEGLConfigChooser(8, 8, 8, 8, 16, 8);
         setGvrView(gvrView);
-        disabledDefaultButtons(gvrView);
 
         ImageButton stereoSwitcher = findViewById(R.id.stereo_mono_switch);
         stereoSwitcher.setOnClickListener(new ModeListener(gvrView));
@@ -35,16 +34,19 @@ public class GameActivity extends GvrActivity {
         //Prepare renderer
         SceneRenderer mRenderer = new SceneRenderer(getApplicationContext(), mSensorManager, accelerometer, magnetic);
         gvrView.setRenderer(mRenderer);
+
+        disabledDefaultButtons();
     }
 
     @Override
     public void onCardboardTrigger() {
+        disabledDefaultButtons();
         super.onCardboardTrigger();
     }
 
-    private void disabledDefaultButtons(GvrView gvrView) {
+    private void disabledDefaultButtons() {
         // Configure button
-        ImageButton settingsButton = gvrView.findViewById(R.id.ui_settings_button);
+        ImageButton settingsButton = this.getGvrView().findViewById(R.id.ui_settings_button);
         settingsButton.setVisibility(View.GONE);
 
 //         Back Button

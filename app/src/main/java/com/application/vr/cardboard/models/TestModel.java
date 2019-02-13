@@ -29,6 +29,7 @@ public class TestModel {
     private int mColorHandle;
     private int mMVPMatrixHandle;
     private float[] mModelMatrix = new float[16];
+    private float[] mMVPMatrix = new float[16];
 
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
@@ -66,7 +67,8 @@ public class TestModel {
         //Drawing of the model
         GLES30.glVertexAttribPointer(mPositionHandle, 3, GL_FLOAT, false, 0, vertexData);
         drawModel();
-        float[] mMVPMatrix = new float[16];
+
+        Matrix.setIdentityM(mMVPMatrix, 0);
         Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix, 0, mModelMatrix, 0);
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
 

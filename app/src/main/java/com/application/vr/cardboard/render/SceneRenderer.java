@@ -7,42 +7,61 @@ import android.opengl.GLES30;
 import android.opengl.Matrix;
 import android.util.Log;
 
+import com.application.vr.cardboard.Camera;
 import com.application.vr.cardboard.FPSCounter;
-import com.application.vr.cardboard.models.StarsModel;
+import com.application.vr.cardboard.models.factories.FactoryAsteroid;
+import com.application.vr.cardboard.models.factories.FactorySpaceshipCargo;
+import com.application.vr.cardboard.models.factories.FactorySpaceshipHunter;
+import com.application.vr.cardboard.models.Stars;
 import com.application.vr.cardboard.models.TestModel;
+import com.application.vr.cardboard.models.interfaces.Model;
 import com.application.vr.cardboard.motion.DeviceSensorListener;
 import com.application.vr.cardboard.motion.MotionCalculator;
 import com.google.vr.sdk.base.Eye;
 import com.google.vr.sdk.base.GvrView;
 import com.google.vr.sdk.base.HeadTransform;
 import com.google.vr.sdk.base.Viewport;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.microedition.khronos.egl.EGLConfig;
 
 public class SceneRenderer implements GvrView.StereoRenderer {
 
     private static final String TAG = "MyGLRenderer";
+    private List<Model> models;
     private Context context;
-    private DeviceSensorListener sensorListener;
-    private MotionCalculator mCalculator;
+    private Camera camera;
     private FPSCounter fpsCounter;
 
     private static final float Z_NEAR = 1f;
     private static final float Z_FAR = 1100.0f;
 
-    private TestModel mModel;
-    private StarsModel stars;
+    private FactoryAsteroid asteroidFactory;
+    private FactorySpaceshipCargo cargoFactory;
+    private FactorySpaceshipHunter hunterFactory;
+    private TestModel testModel;
+    private Stars stars;
 
     // mVPMatrix is an abbreviation for "View Projection Matrix"
     private final float[] mVPMatrix = new float[16];
-    private final float[] mViewMatrix = new float[16];
     private float[] mProjectionMatrix = new float[16];
-    private float[] rotationMatrix = new float[16];
+    private float[] mRotatedOnlyMatrix = new float[16];
 
     public SceneRenderer(Context context, SensorManager mSensorManage, Sensor accelerom, Sensor magnetic) {
         this.context = context;
-        sensorListener = new DeviceSensorListener(mSensorManage, accelerom, magnetic);
-        mCalculator = new MotionCalculator(sensorListener);
+        models = new ArrayList<>();
+
+        DeviceSensorListener sensorListener = new DeviceSensorListener(mSensorManage, accelerom, magnetic);
+        MotionCalculator mCalculator = new MotionCalculator(sensorListener);
+
+        camera = new Camera(mCalculator);
         fpsCounter = new FPSCounter();
+
+        asteroidFactory = new FactoryAsteroid();
+        cargoFactory = new FactorySpaceshipCargo();
+        hunterFactory = new FactorySpaceshipHunter();
     }
 
     @Override
@@ -52,27 +71,8 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         // Clear depth buffer
         GLES30.glEnable(GLES30.GL_DEPTH_TEST);
 
-        // Set mViewMatrix at the origin and set a new view point.
-        Matrix.setLookAtM(mViewMatrix, 0, 0, 0, 0, 0, 0, -100, 0, 1, 0);
-        // Matrix.setLookAtM(mViewMatrix, 0, 5, 5, 40, 0, 0, -100, 0f, 1f, 0f);
-
-        // Create some temp matrix to store a multiplication of the rotationMatrix and new Pitch rotation.
-        float[] newPitchRotationM = new float[16];
-        Matrix.setIdentityM(newPitchRotationM, 0);
-        Matrix.rotateM(newPitchRotationM, 0, mCalculator.getPitch(), 1.0f, 0.0f, 0.0f);
-        Matrix.multiplyMM(rotationMatrix, 0, newPitchRotationM , 0, rotationMatrix, 0);
-
-        // Create some temp matrix to store the multiplication of the rotationMatrix and new Roll rotation.
-        float[] newRollRotation = new float[16];
-        Matrix.setIdentityM(newRollRotation, 0);
-        Matrix.rotateM(newRollRotation, 0, mCalculator.getRoll(), 0.0f, 0.0f, 1.0f);
-        Matrix.multiplyMM(rotationMatrix, 0, newRollRotation , 0, rotationMatrix, 0);
-
-        // Multiply mViewMatrix with the final rotations.
-        Matrix.multiplyMM(mViewMatrix, 0, rotationMatrix, 0, mViewMatrix, 0);
-
-        //Apply mProjectionMatrix and the updated mViewMatrix.
-        Matrix.multiplyMM(mVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
+        //Draw camera view and update mVPMatrix to draw models.
+        mRotatedOnlyMatrix = camera.draw(mVPMatrix, mProjectionMatrix);
 
         // Log FPS
         fpsCounter.logFrame();
@@ -80,19 +80,31 @@ public class SceneRenderer implements GvrView.StereoRenderer {
 
     @Override
     public void onDrawEye(Eye eye) {
-        // Draw square
-        mModel.draw(mVPMatrix);
-        stars.draw(mVPMatrix);
+        for (Model m : models) m.draw(mVPMatrix);
+        stars.draw(mRotatedOnlyMatrix.clone(), mProjectionMatrix.clone(), camera.getSpeed());
+        testModel.draw(mVPMatrix);
     }
 
     @Override
     public void onSurfaceCreated(EGLConfig eglConfig) {
         // Set the background frame color
         GLES30.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        // Set identity to the rotationMatrix only once.
-        Matrix.setIdentityM(rotationMatrix, 0);
-        mModel = new TestModel(context);
-        stars = new StarsModel(context);
+        models.add(asteroidFactory.create(context, 70, -55, -60, 0f, 0.5f, 0.5f, 15f));
+        models.add(asteroidFactory.create(context, -10, -100, -6, 0.5f, 0f, 0.5f, 5f));
+        models.add(asteroidFactory.create(context, -40, 35, 30, 0.5f, 0.5f, 0f, 2f));
+        models.add(asteroidFactory.create(context, 40, 68, 90, 0.5f, 0.5f, 0f, 8f));
+
+        models.add(cargoFactory.create(context, 16f, -5f, -150f, 0f, 0f, 0f, 0f));
+        models.add(cargoFactory.create(context, 0f, -15f, -155f, 0f, 0f, 0f, 0f));
+        models.add(cargoFactory.create(context, -19f, -10f, -140f, 0f, 0f, 0f, 0f));
+
+        models.add(hunterFactory.create(context, 10f, 25f, -170f,  0f, 0f, 0f, 0f));
+        models.add(hunterFactory.create(context, 20f, 55f, -180f,  0f, 0f, 0f, 0f));
+        models.add(hunterFactory.create(context, 30f, 35f, -180f,  0f, 0f, 0f, 0f));
+        models.add(hunterFactory.create(context, 40f, 75f, -190f,  0f, 0f, 0f, 0f));
+
+        testModel = new TestModel(context);
+        stars = new Stars(context);
     }
 
     @Override

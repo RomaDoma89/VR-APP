@@ -1,5 +1,6 @@
 package com.application.vr.cardboard;
 
+
 import android.util.Log;
 
 public class FPSCounter {

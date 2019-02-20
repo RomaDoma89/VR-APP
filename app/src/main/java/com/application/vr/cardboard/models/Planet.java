@@ -7,7 +7,7 @@ import android.opengl.Matrix;
 import com.application.vr.cardboard.R;
 import com.application.vr.cardboard.file_utils.ShaderUtils;
 import com.application.vr.cardboard.file_utils.TextureLoader;
-import com.application.vr.cardboard.models.interfaces.DynamicModel;
+import com.application.vr.cardboard.models.interfaces.StaticModel;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,8 +16,6 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 import de.javagl.obj.Obj;
 import de.javagl.obj.ObjData;
@@ -28,34 +26,31 @@ import static android.opengl.GLES20.GL_TRIANGLES;
 import static android.opengl.GLES20.GL_UNSIGNED_SHORT;
 import static android.opengl.GLES20.glDrawElements;
 
-/**
- * A test model for use as a drawn object in OpenGL ES 2.0.
- */
-public class AsteroidStone implements DynamicModel {
-    private List<FloatBuffer> corpusVertexList, corpusTextureList;
-    private List<ShortBuffer> corpusIndicesList;
-
-    private TextureLoader corpusTextureLoader;
+public class Planet implements StaticModel {
+    private FloatBuffer verticesBuff, texturesBuff;
+    private ShortBuffer indicesBuff;
+    private TextureLoader textureLoader;
 
     private final int mProgram;
     private int mPositionHandle;
     private int mMVPMatrixHandle;
     private int mUVHandle;
+    
     private float[] mModelMatrix = new float[16];
     private float[] mMVPMatrix = new float[16];
     private float[] translationMatrix = new float[16];
     private float[] rotationMatrix = new float[16];
     private float[] scaleMatrix = new float[16];
-
+    
     private float translationX, translationY, translationZ;
     private float rotationX, rotationY, rotationZ;
     private float scale;
-
+    
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
-    public AsteroidStone(Context context, float translationX, float translationY, float translationZ,
-                         float rotationX, float rotationY, float rotationZ, float scale) {
+    public Planet(Context context, float translationX, float translationY, float translationZ,
+                  float rotationX, float rotationY, float rotationZ, float scale) {
         this.translationX = translationX;
         this.translationY = translationY;
         this.translationZ = translationZ;
@@ -82,7 +77,8 @@ public class AsteroidStone implements DynamicModel {
 
     private float rotation = 0f;
     public void prepareModel(){
-        rotation += 0.3f;
+        rotation += 0.05f;
+        if (rotation > 360) rotation -= 360f;
 
         Matrix.setIdentityM(scaleMatrix, 0);
         Matrix.scaleM(scaleMatrix, 0, scale, scale, scale);
@@ -106,56 +102,49 @@ public class AsteroidStone implements DynamicModel {
     public void draw(float[] mVPMatrix) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
-        // Draw the vertices and the textures
-        // Enable vertex array
-        corpusTextureLoader.bind();
-        GLES30.glEnableVertexAttribArray(mPositionHandle);
-        GLES30.glEnableVertexAttribArray(mUVHandle);
-        for (int i=0; i<corpusVertexList.size(); i++)
-            drawModel(corpusVertexList.get(i), corpusTextureList.get(i), corpusIndicesList.get(i));
-        // Disable vertex array
-        GLES30.glDisableVertexAttribArray(mPositionHandle);
-        GLES30.glDisableVertexAttribArray(mUVHandle);
-        corpusTextureLoader.unbind();
+
+        drawModel(verticesBuff, texturesBuff, indicesBuff);
+
         Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix, 0, mModelMatrix, 0);
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
     }
 
     private void prepareData(Context context) {
-        corpusVertexList = new ArrayList<>();
-        corpusTextureList = new ArrayList<>();
-        corpusIndicesList = new ArrayList<>();
-
         Obj obj = null;
         try {
-            InputStream objInputStream = context.getAssets().open("objects/asteroid_1.obj");
+            InputStream objInputStream = context.getAssets().open("objects/planet.obj");
             obj = ObjUtils.convertToRenderable(ObjReader.read(objInputStream));
             objInputStream.close();
-            corpusTextureLoader = new TextureLoader(context, "textures/meteor_txr_2.jpg");
+            textureLoader = new TextureLoader(context, "textures/planet_txr_1.jpg");
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        if (null != obj) {
-            corpusVertexList = new ArrayList<>();
-            corpusTextureList = new ArrayList<>();
-            corpusIndicesList = new ArrayList<>();
-
-            // Extract the geometry data. This data can be used to create
+        if (null != obj) {            // Extract the geometry data. This data can be used to create
             // the vertex buffer objects and vertex array objects for OpenGL
-            corpusVertexList.add(ObjData.getVertices(obj));
-            corpusTextureList.add(ObjData.getTexCoords(obj, 2));
+            verticesBuff = ObjData.getVertices(obj);
+            texturesBuff = ObjData.getTexCoords(obj, 2);
             IntBuffer intIndices = ObjData.getFaceVertexIndices(obj);
             ShortBuffer indices = ByteBuffer.allocateDirect(intIndices.limit() * 2).order(ByteOrder.nativeOrder()).asShortBuffer();
             while (intIndices.hasRemaining()) indices.put((short) intIndices.get());
             indices.rewind();
-            corpusIndicesList.add(indices);
+            indicesBuff = indices;
         }
     }
 
     private void drawModel(FloatBuffer vertexBuff, FloatBuffer textureBuffer, ShortBuffer indices) {
+        textureLoader.bind();
+        // Enable vertex array
+        GLES30.glEnableVertexAttribArray(mPositionHandle);
+        GLES30.glEnableVertexAttribArray(mUVHandle);
+
         GLES30.glVertexAttribPointer(mPositionHandle, 3, GLES30.GL_FLOAT, false, 0, vertexBuff);
         GLES30.glVertexAttribPointer(mUVHandle, 2, GLES30.GL_FLOAT, false, 0, textureBuffer);
         glDrawElements(GL_TRIANGLES, indices.limit(), GL_UNSIGNED_SHORT, indices);
+
+        // Disable vertex array
+        GLES30.glDisableVertexAttribArray(mPositionHandle);
+        GLES30.glDisableVertexAttribArray(mUVHandle);
+        textureLoader.unbind();
     }
 }

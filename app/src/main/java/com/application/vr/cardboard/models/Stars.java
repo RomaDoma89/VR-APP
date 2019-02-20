@@ -3,17 +3,16 @@ package com.application.vr.cardboard.models;
 import android.content.Context;
 import android.opengl.GLES30;
 import android.opengl.Matrix;
-import android.util.Log;
 
 import com.application.vr.cardboard.R;
 import com.application.vr.cardboard.file_utils.ShaderUtils;
+import com.application.vr.cardboard.models.interfaces.StaticModel;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.Random;
 
-import javax.microedition.khronos.opengles.GL11;
 
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_POINTS;
@@ -21,17 +20,19 @@ import static android.opengl.GLES20.glDrawArrays;
 import static android.opengl.GLES20.glLineWidth;
 import static android.opengl.GLES20.glUniform4f;
 
-public class Stars {
+public class Stars implements StaticModel {
     private FloatBuffer vertexData;
 
     private final int mProgram;
-    private int mColorHandle;
-    private float[] mModelMatrix = new float[16];
-    private float[] mMVPMatrix = new float[16];
-    float[] backTranslateMatrix = new float[16];
-    private Random random = new Random();
-    private int stars_amount = 5000;
+    private final int mColorHandle;
+    private final int mPositionHandle;
+    private final int mMVPMatrixHandle;
 
+    private final float[] mModelMatrix = new float[16];
+    private final float[] mMVPMatrix = new float[16];
+
+    private final Random random = new Random();
+    private int stars_amount = 5000;
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
@@ -40,49 +41,39 @@ public class Stars {
         // Prepare shaders and OpenGL program.
         int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader);
         int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader);
+
         // Create empty OpenGL Program.
         mProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
+        // get handle to vertex shader's vPosition member
+        mPositionHandle = GLES30.glGetAttribLocation(mProgram, "vPosition");
+        // get handle to fragment shader's vColor member
+        mColorHandle = GLES30.glGetUniformLocation(mProgram, "vColor");
+        // get handle to shape's transformation matrix
+        mMVPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix");
+
+        Matrix.setIdentityM(mMVPMatrix, 0);
+    }
+
+    public void prepareModel(){
+        Matrix.setIdentityM(mModelMatrix, 0);
+        // We can transform, rotate or scale the mModelMatrix here.
+
+        // Multiply the MVP and the DynamicModel matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
     }
 
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
-    public void draw(float[] rotationMatrix, float[] mProjectionMatrix, float speed) {
+    public void draw(float[] mVPMatrix) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
-        // get handle to vertex shader's vPosition member
-        int mPositionHandle = GLES30.glGetAttribLocation(mProgram, "vPosition");
-        // get handle to fragment shader's vColor member
-        mColorHandle = GLES30.glGetUniformLocation(mProgram, "vColor");
-        // get handle to shape's transformation matrix
-        int mMVPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix");
-
-        // Enable vertex array
-        GLES30.glEnableVertexAttribArray(mPositionHandle);
-
-        Matrix.setIdentityM(mModelMatrix, 0);
-        // We can transform, rotate or scale the mModelMatrix here.
 
         //Drawing of the model
-        GLES30.glVertexAttribPointer(mPositionHandle, 3, GL_FLOAT, false, 0, vertexData);
         drawModel();
-
-        // Store the multiplication of the rotationMatrix and new translation.
-        Matrix.setIdentityM(backTranslateMatrix, 0);
-        Matrix.translateM(rotationMatrix, 0, 0.0f, 0.0f, -speed);
-//        Matrix.multiplyMM(rotationMatrix, 0, backTranslateMatrix , 0, rotationMatrix, 0);
-
-        //Apply mProjectionMatrix and the updated mViewMatrix.
-        float[] mVPMatrix = new float[16];
-        Matrix.setIdentityM(mVPMatrix, 0);
-        Matrix.multiplyMM(mVPMatrix, 0, mProjectionMatrix, 0, rotationMatrix, 0);
 
         Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix, 0, mModelMatrix, 0);
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
-
-        // Disable vertex array
-        GLES30.glDisableVertexAttribArray(mPositionHandle);
     }
 
     private void prepareData() {
@@ -118,8 +109,13 @@ public class Stars {
     }
 
     private void drawModel() {
+        // Enable vertex array
+        GLES30.glEnableVertexAttribArray(mPositionHandle);
+        GLES30.glVertexAttribPointer(mPositionHandle, 3, GL_FLOAT, false, 0, vertexData);
         glLineWidth(1);
         glUniform4f(mColorHandle, 1.0f, 1.0f, 1.0f, 1.0f);
         glDrawArrays(GL_POINTS, 0, stars_amount);
+        // Disable vertex array
+        GLES30.glDisableVertexAttribArray(mPositionHandle);
     }
 }

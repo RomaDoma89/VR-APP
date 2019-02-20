@@ -4,12 +4,12 @@ import android.content.Context;
 
 import com.application.vr.cardboard.models.AsteroidStone;
 import com.application.vr.cardboard.models.interfaces.CreatorModel;
-import com.application.vr.cardboard.models.interfaces.Model;
+import com.application.vr.cardboard.models.interfaces.DynamicModel;
 
 public class FactoryAsteroid implements CreatorModel {
     @Override
-    public Model create(Context context, float translationX, float translationY, float translationZ,
-                        float rotationX, float rotationY, float rotationZ, float scale) {
+    public DynamicModel create(Context context, float translationX, float translationY, float translationZ,
+                               float rotationX, float rotationY, float rotationZ, float scale) {
         return new AsteroidStone(context, translationX, translationY, translationZ,
                 rotationX, rotationY, rotationZ, scale);
     }

@@ -9,12 +9,14 @@ import android.util.Log;
 
 import com.application.vr.cardboard.Camera;
 import com.application.vr.cardboard.FPSCounter;
+import com.application.vr.cardboard.models.UserInterface;
 import com.application.vr.cardboard.models.factories.FactoryAsteroid;
+import com.application.vr.cardboard.models.factories.FactoryPlanet;
 import com.application.vr.cardboard.models.factories.FactorySpaceshipCargo;
 import com.application.vr.cardboard.models.factories.FactorySpaceshipHunter;
 import com.application.vr.cardboard.models.Stars;
-import com.application.vr.cardboard.models.TestModel;
-import com.application.vr.cardboard.models.interfaces.Model;
+import com.application.vr.cardboard.models.interfaces.DynamicModel;
+import com.application.vr.cardboard.models.interfaces.StaticModel;
 import com.application.vr.cardboard.motion.DeviceSensorListener;
 import com.application.vr.cardboard.motion.MotionCalculator;
 import com.google.vr.sdk.base.Eye;
@@ -29,29 +31,31 @@ import javax.microedition.khronos.egl.EGLConfig;
 
 public class SceneRenderer implements GvrView.StereoRenderer {
 
-    private static final String TAG = "MyGLRenderer";
-    private List<Model> models;
+    private static final String TAG = "SceneRenderer";
+    private List<DynamicModel> dynamicModels;
+    private List<StaticModel> staticModels;
     private Context context;
     private Camera camera;
+    private UserInterface ui;
     private FPSCounter fpsCounter;
 
     private static final float Z_NEAR = 1f;
     private static final float Z_FAR = 1100.0f;
 
+    private FactoryPlanet planetFactory;
     private FactoryAsteroid asteroidFactory;
     private FactorySpaceshipCargo cargoFactory;
     private FactorySpaceshipHunter hunterFactory;
-    private TestModel testModel;
-    private Stars stars;
 
-    // mVPMatrix is an abbreviation for "View Projection Matrix"
-    private final float[] mVPMatrix = new float[16];
+    // dynamicVPMatrix is an abbreviation for "View Projection Matrix"
+    private final float[] dynamicVPMatrix = new float[16];
+    private final float[] staticVPMatrix = new float[16];
     private float[] mProjectionMatrix = new float[16];
-    private float[] mRotatedOnlyMatrix = new float[16];
 
     public SceneRenderer(Context context, SensorManager mSensorManage, Sensor accelerom, Sensor magnetic) {
         this.context = context;
-        models = new ArrayList<>();
+        dynamicModels = new ArrayList<>();
+        staticModels = new ArrayList<>();
 
         DeviceSensorListener sensorListener = new DeviceSensorListener(mSensorManage, accelerom, magnetic);
         MotionCalculator mCalculator = new MotionCalculator(sensorListener);
@@ -59,6 +63,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         camera = new Camera(mCalculator);
         fpsCounter = new FPSCounter();
 
+        planetFactory = new FactoryPlanet();
         asteroidFactory = new FactoryAsteroid();
         cargoFactory = new FactorySpaceshipCargo();
         hunterFactory = new FactorySpaceshipHunter();
@@ -70,41 +75,49 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT | GLES30.GL_DEPTH_BUFFER_BIT);
         // Clear depth buffer
         GLES30.glEnable(GLES30.GL_DEPTH_TEST);
+        // Cull back faces
+        //GLES30.glEnable(GLES30.GL_CULL_FACE);
 
-        //Draw camera view and update mVPMatrix to draw models.
-        mRotatedOnlyMatrix = camera.draw(mVPMatrix, mProjectionMatrix);
+        camera.transform();
+        Matrix.multiplyMM(dynamicVPMatrix, 0, mProjectionMatrix, 0, camera.getCompleteViewMatrix(), 0);
+        Matrix.multiplyMM(staticVPMatrix, 0, mProjectionMatrix, 0, camera.getRotatedViewMatrix(), 0);
 
+        for (DynamicModel m : dynamicModels) m.prepareModel();
+        for (StaticModel m : staticModels) m.prepareModel();
+        ui.prepareModel();
         // Log FPS
         fpsCounter.logFrame();
     }
 
     @Override
     public void onDrawEye(Eye eye) {
-        for (Model m : models) m.draw(mVPMatrix);
-        stars.draw(mRotatedOnlyMatrix.clone(), mProjectionMatrix.clone(), camera.getSpeed());
-        testModel.draw(mVPMatrix);
+        for (DynamicModel m : dynamicModels) m.draw(dynamicVPMatrix);
+        for (StaticModel m : staticModels) m.draw(staticVPMatrix);
+        ui.draw();
     }
 
     @Override
     public void onSurfaceCreated(EGLConfig eglConfig) {
         // Set the background frame color
         GLES30.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        models.add(asteroidFactory.create(context, 70, -55, -60, 0f, 0.5f, 0.5f, 15f));
-        models.add(asteroidFactory.create(context, -10, -100, -6, 0.5f, 0f, 0.5f, 5f));
-        models.add(asteroidFactory.create(context, -40, 35, 30, 0.5f, 0.5f, 0f, 2f));
-        models.add(asteroidFactory.create(context, 40, 68, 90, 0.5f, 0.5f, 0f, 8f));
+        dynamicModels.add(asteroidFactory.create(context, 70, -55, -60, 0f, 0.5f, 0.5f, 10f));
+        dynamicModels.add(asteroidFactory.create(context, -25, -100, -66, 0.5f, 0f, 0.5f, 5f));
+        dynamicModels.add(asteroidFactory.create(context, -40, 35, 30, 0.5f, 0.5f, 0f, 2f));
+        dynamicModels.add(asteroidFactory.create(context, 40, 68, 90, 0.5f, 0.5f, 0f, 8f));
 
-        models.add(cargoFactory.create(context, 16f, -5f, -150f, 0f, 0f, 0f, 0f));
-        models.add(cargoFactory.create(context, 0f, -15f, -155f, 0f, 0f, 0f, 0f));
-        models.add(cargoFactory.create(context, -19f, -10f, -140f, 0f, 0f, 0f, 0f));
+        dynamicModels.add(cargoFactory.create(context, 16f, -5f, -150f, 0f, 0f, 0f, 0f));
+        dynamicModels.add(cargoFactory.create(context, 0f, -15f, -155f, 0f, 0f, 0f, 0f));
+        dynamicModels.add(cargoFactory.create(context, -19f, -10f, -140f, 0f, 0f, 0f, 0f));
 
-        models.add(hunterFactory.create(context, 10f, 25f, -170f,  0f, 0f, 0f, 0f));
-        models.add(hunterFactory.create(context, 20f, 55f, -180f,  0f, 0f, 0f, 0f));
-        models.add(hunterFactory.create(context, 30f, 35f, -180f,  0f, 0f, 0f, 0f));
-        models.add(hunterFactory.create(context, 40f, 75f, -190f,  0f, 0f, 0f, 0f));
+        dynamicModels.add(hunterFactory.create(context, 10f, 25f, -170f,  0f, 0f, 0f, 0f));
+        dynamicModels.add(hunterFactory.create(context, 20f, 55f, -180f,  0f, 0f, 0f, 0f));
+        dynamicModels.add(hunterFactory.create(context, 30f, 35f, -180f,  0f, 0f, 0f, 0f));
+        dynamicModels.add(hunterFactory.create(context, 40f, 75f, -190f,  0f, 0f, 0f, 0f));
 
-        testModel = new TestModel(context);
-        stars = new Stars(context);
+        staticModels.add(planetFactory.create(context, 70, -55, -180, 0f, 1f, 0f, 20f));
+        staticModels.add(new Stars(context));
+
+        ui = new UserInterface(context);
     }
 
     @Override
@@ -121,9 +134,12 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     }
 
     @Override
-    public void onRendererShutdown() {}
+    public void onRendererShutdown() {
+
+    }
     @Override
-    public void onFinishFrame(Viewport viewport) {}
+    public void onFinishFrame(Viewport viewport) {
+    }
 
     /**
      * Utility method for debugging OpenGL calls. Provide the name of the call

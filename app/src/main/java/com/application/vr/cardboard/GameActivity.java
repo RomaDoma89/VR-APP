@@ -3,11 +3,14 @@ package com.application.vr.cardboard;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 
 import com.application.vr.cardboard.app_mode.ModeListener;
 import com.application.vr.cardboard.render.SceneRenderer;
+import com.google.vr.ndk.base.GvrApi;
+import com.google.vr.sdk.base.AndroidCompat;
 import com.google.vr.sdk.base.GvrActivity;
 import com.google.vr.sdk.base.GvrView;
 
@@ -26,15 +29,13 @@ public class GameActivity extends GvrActivity {
         //Prepare View
         GvrView gvrView = findViewById(R.id.gvr_view);
         gvrView.setEGLConfigChooser(8, 8, 8, 8, 16, 8);
+        //Prepare renderer
+        SceneRenderer mRenderer = new SceneRenderer(getApplicationContext(), mSensorManager, accelerometer, magnetic);
+        gvrView.setRenderer(mRenderer);
         setGvrView(gvrView);
 
         ImageButton stereoSwitcher = findViewById(R.id.stereo_mono_switch);
         stereoSwitcher.setOnClickListener(new ModeListener(gvrView));
-
-        //Prepare renderer
-        SceneRenderer mRenderer = new SceneRenderer(getApplicationContext(), mSensorManager, accelerometer, magnetic);
-        gvrView.setRenderer(mRenderer);
-
         disabledDefaultButtons();
     }
 

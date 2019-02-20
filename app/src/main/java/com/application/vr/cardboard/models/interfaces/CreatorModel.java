@@ -4,5 +4,5 @@ import android.content.Context;
 
 public interface CreatorModel {
     Model create(Context context, float translationX, float translationY, float translationZ,
-                 float rotationX, float rotationY, float rotationZ, float scale);
+                        float rotationX, float rotationY, float rotationZ, float scale);
 }

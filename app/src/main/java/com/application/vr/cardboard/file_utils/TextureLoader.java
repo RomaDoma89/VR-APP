@@ -36,9 +36,11 @@ public class TextureLoader {
     public TextureLoader(Context context, String texturePath) throws IOException {
         GLES30.glGenTextures(1, textureId, 0);
         bind();
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D_ARRAY, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE);
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D_ARRAY, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE);
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_LINEAR);
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_LINEAR);
         Bitmap textureBitmap = BitmapFactory.decodeStream(context.getAssets().open(texturePath));
+        // Use tightly packed data
+        GLES30.glPixelStorei(GLES30.GL_UNPACK_ALIGNMENT, 1);
         GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, textureBitmap, 0);
         textureBitmap.recycle();
         GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D);
@@ -46,7 +48,10 @@ public class TextureLoader {
 
     /** Binds the texture to GL_TEXTURE0. */
     public void bind() {
-        GLES30.glActiveTexture(GLES30.GL_TEXTURE0);
+//        GLES30.glActiveTexture(GLES30.GL_TEXTURE0);
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureId[0]);
+    }
+    public void unbind() {
+        GLES30.glBindTexture (GLES30.GL_TEXTURE_2D, 0);
     }
 }

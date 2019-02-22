@@ -83,7 +83,32 @@ public class SpaceshipHunter implements DynamicModel {
         // Load and parse Blander object.
         this.prepareData(context);
     }
+
+    @Override
+    public float[] getModelMatrix() {
+        return mModelMatrix.clone();
+    }
+    @Override
+    public FloatBuffer getModelVertex() {
+        return corpusVertexList.get(0);
+    }
+    @Override
+    public float getTranslationX() {
+        return translateX;
+    }
+
+    @Override
+    public float getTranslationY() {
+        return translateY;
+    }
+
+    @Override
+    public float getTranslationZ() {
+        return translateZ;
+    }
+
     private float rotation = 0f;
+    @Override
     public void prepareModel(){
         rotation += 0.3f;
 
@@ -92,8 +117,10 @@ public class SpaceshipHunter implements DynamicModel {
 
         Matrix.setIdentityM(rotationMatrix, 0);
 //        Matrix.rotateM(rotationMatrix, 0, rotation, 0f, 0f, 0.5f);
+
         Matrix.setIdentityM(mModelMatrix, 0);
         Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
+//        Matrix.multiplyMM(mModelMatrix, 0, rotationMatrix, 0, rotationMatrix, 0);
         // Multiply the MVP and the DynamicModel matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
     }
@@ -101,6 +128,7 @@ public class SpaceshipHunter implements DynamicModel {
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
+    @Override
     public void draw(float[] mVPMatrix) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);

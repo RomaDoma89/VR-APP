@@ -1,4 +1,4 @@
-package com.application.vr.cardboard.models;
+package com.application.vr.cardboard.models.ui_models;
 
 import android.content.Context;
 import android.opengl.GLES30;
@@ -27,7 +27,7 @@ import static android.opengl.GLES20.GL_TRIANGLES;
 import static android.opengl.GLES20.GL_UNSIGNED_SHORT;
 import static android.opengl.GLES20.glDrawElements;
 
-public class UserInterface {
+public class UiAim {
     private FloatBuffer vertices, textures;
     private ShortBuffer indices;
     private TextureLoader textureLoader;
@@ -43,7 +43,7 @@ public class UserInterface {
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
-    public UserInterface(Context context) {
+    public UiAim(Context context) {
         prepareData(context);
         // Prepare shaders and OpenGL program.
         int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader_uv);
@@ -77,8 +77,6 @@ public class UserInterface {
     }
 
     private void prepareData(Context context) {
-
-
         Obj obj = null;
         try {
             InputStream objInputStream = context.getAssets().open("objects/ui.obj");

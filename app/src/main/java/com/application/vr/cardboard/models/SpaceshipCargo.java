@@ -84,7 +84,32 @@ public class SpaceshipCargo implements DynamicModel {
         this.prepareData(context);
     }
 
+    @Override
+    public float[] getModelMatrix() {
+        return mModelMatrix.clone();
+    }
+
+    @Override
+    public FloatBuffer getModelVertex() {
+        return corpusVertexList.get(0);
+    }
+    @Override
+    public float getTranslationX() {
+        return translateX;
+    }
+
+    @Override
+    public float getTranslationY() {
+        return translateY;
+    }
+
+    @Override
+    public float getTranslationZ() {
+        return translateZ;
+    }
+
     private float rotation = 0f;
+    @Override
     public void prepareModel(){
         rotation += 0.3f;
         Matrix.setIdentityM(translationMatrix, 0);
@@ -102,6 +127,7 @@ public class SpaceshipCargo implements DynamicModel {
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
+    @Override
     public void draw(float[] mVPMatrix) {
         // Add program to OpenGL environment.
         GLES30.glUseProgram(mProgram);

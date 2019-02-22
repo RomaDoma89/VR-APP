@@ -47,7 +47,7 @@ public class AsteroidStone implements DynamicModel {
     private float[] rotationMatrix = new float[16];
     private float[] scaleMatrix = new float[16];
 
-    private float translationX, translationY, translationZ;
+    private float translateX, translateY, translateZ;
     private float rotationX, rotationY, rotationZ;
     private float scale;
 
@@ -56,9 +56,9 @@ public class AsteroidStone implements DynamicModel {
      */
     public AsteroidStone(Context context, float translationX, float translationY, float translationZ,
                          float rotationX, float rotationY, float rotationZ, float scale) {
-        this.translationX = translationX;
-        this.translationY = translationY;
-        this.translationZ = translationZ;
+        this.translateX = translationX;
+        this.translateY = translationY;
+        this.translateZ = translationZ;
         this.rotationX = rotationX;
         this.rotationY = rotationY;
         this.rotationZ = rotationZ;
@@ -80,14 +80,40 @@ public class AsteroidStone implements DynamicModel {
         this.prepareData(context);
     }
 
+    @Override
+    public float[] getModelMatrix() {
+        return mModelMatrix.clone();
+    }
+
+    @Override
+    public FloatBuffer getModelVertex() {
+        return corpusVertexList.get(0);
+    }
+
+    @Override
+    public float getTranslationX() {
+        return translateX;
+    }
+
+    @Override
+    public float getTranslationY() {
+        return translateY;
+    }
+
+    @Override
+    public float getTranslationZ() {
+        return translateZ;
+    }
+
     private float rotation = 0f;
+    @Override
     public void prepareModel(){
         rotation += 0.3f;
 
         Matrix.setIdentityM(scaleMatrix, 0);
         Matrix.scaleM(scaleMatrix, 0, scale, scale, scale);
         Matrix.setIdentityM(translationMatrix, 0);
-        Matrix.translateM(translationMatrix, 0, translationX, translationY, translationZ);
+        Matrix.translateM(translationMatrix, 0, translateX, translateY, translateZ);
         Matrix.setIdentityM(rotationMatrix, 0);
         Matrix.rotateM(rotationMatrix, 0, rotation, rotationX, rotationY, rotationZ);
 
@@ -103,6 +129,7 @@ public class AsteroidStone implements DynamicModel {
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
+    @Override
     public void draw(float[] mVPMatrix) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);

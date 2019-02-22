@@ -9,7 +9,7 @@ import android.util.Log;
 
 import com.application.vr.cardboard.Camera;
 import com.application.vr.cardboard.FPSCounter;
-import com.application.vr.cardboard.models.UserInterface;
+import com.application.vr.cardboard.models.ui_models.UiCreator;
 import com.application.vr.cardboard.models.factories.FactoryAsteroid;
 import com.application.vr.cardboard.models.factories.FactoryPlanet;
 import com.application.vr.cardboard.models.factories.FactorySpaceshipCargo;
@@ -30,35 +30,35 @@ import java.util.List;
 import javax.microedition.khronos.egl.EGLConfig;
 
 public class SceneRenderer implements GvrView.StereoRenderer {
-
     private static final String TAG = "SceneRenderer";
-    private List<DynamicModel> dynamicModels;
-    private List<StaticModel> staticModels;
-    private Context context;
-    private Camera camera;
-    private UserInterface ui;
-    private FPSCounter fpsCounter;
-
     private static final float Z_NEAR = 1f;
     private static final float Z_FAR = 1100.0f;
+
+    private Context context;
+    private Camera camera;
+    private FPSCounter fpsCounter;
 
     private FactoryPlanet planetFactory;
     private FactoryAsteroid asteroidFactory;
     private FactorySpaceshipCargo cargoFactory;
     private FactorySpaceshipHunter hunterFactory;
 
+    private List<DynamicModel> dynamicModels;
+    private List<StaticModel> staticModels;
+    private UiCreator uiCreator;
+
     // dynamicVPMatrix is an abbreviation for "View Projection Matrix"
     private final float[] dynamicVPMatrix = new float[16];
     private final float[] staticVPMatrix = new float[16];
-    private float[] mProjectionMatrix = new float[16];
+    private final float[] mProjectionMatrix = new float[16];
 
     public SceneRenderer(Context context, SensorManager mSensorManage, Sensor accelerom, Sensor magnetic) {
+        DeviceSensorListener sensorListener = new DeviceSensorListener(mSensorManage, accelerom, magnetic);
+        MotionCalculator mCalculator = new MotionCalculator(sensorListener);
+
         this.context = context;
         dynamicModels = new ArrayList<>();
         staticModels = new ArrayList<>();
-
-        DeviceSensorListener sensorListener = new DeviceSensorListener(mSensorManage, accelerom, magnetic);
-        MotionCalculator mCalculator = new MotionCalculator(sensorListener);
 
         camera = new Camera(mCalculator);
         fpsCounter = new FPSCounter();
@@ -84,16 +84,26 @@ public class SceneRenderer implements GvrView.StereoRenderer {
 
         for (DynamicModel m : dynamicModels) m.prepareModel();
         for (StaticModel m : staticModels) m.prepareModel();
-        ui.prepareModel();
+        uiCreator.prepareModel();
         // Log FPS
         fpsCounter.logFrame();
+        //TODO: for testing
+        if (scaleIncrease) {
+            scaleAmount++;
+            if (scaleAmount == 20) scaleIncrease = false;
+        } else {
+            scaleAmount--;
+            if (scaleAmount == 0) scaleIncrease = true;
+        }
     }
+    int scaleAmount = 0; //TODO: for testing
+    boolean scaleIncrease = true; //TODO: for testing
 
     @Override
     public void onDrawEye(Eye eye) {
         for (DynamicModel m : dynamicModels) m.draw(dynamicVPMatrix);
         for (StaticModel m : staticModels) m.draw(staticVPMatrix);
-        ui.draw();
+        uiCreator.draw(scaleAmount, 8, scaleAmount, 14, scaleAmount, 10, dynamicModels);
     }
 
     @Override
@@ -116,8 +126,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
 
         staticModels.add(planetFactory.create(context, 70, -55, -180, 0f, 1f, 0f, 20f));
         staticModels.add(new Stars(context));
-
-        ui = new UserInterface(context);
+        uiCreator = new UiCreator(context);
     }
 
     @Override

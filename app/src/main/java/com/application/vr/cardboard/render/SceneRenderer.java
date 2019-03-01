@@ -85,25 +85,21 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         for (DynamicModel m : dynamicModels) m.prepareModel();
         for (StaticModel m : staticModels) m.prepareModel();
         uiCreator.prepareModel();
+
+        Matrix.setIdentityM(tmp, 0);
+//        Matrix.rotateM(tmp, 0, camera.getRotatedViewMatrix(), 0 , 180, 0, 1f, 0f);
+//        Matrix.rotateM(tmp, 0 , 180, 0, 0f, 1f);
+
         // Log FPS
         fpsCounter.logFrame();
-        //TODO: for testing
-        if (scaleIncrease) {
-            scaleAmount++;
-            if (scaleAmount == 20) scaleIncrease = false;
-        } else {
-            scaleAmount--;
-            if (scaleAmount == 0) scaleIncrease = true;
-        }
-    }
-    int scaleAmount = 0; //TODO: for testing
-    boolean scaleIncrease = true; //TODO: for testing
 
+    }
+    private float[] tmp = new float[16];
     @Override
     public void onDrawEye(Eye eye) {
+        uiCreator.draw(10, 8, 6, 14, 20, 10, dynamicModels, camera.getRotatedViewMatrix());
         for (DynamicModel m : dynamicModels) m.draw(dynamicVPMatrix);
         for (StaticModel m : staticModels) m.draw(staticVPMatrix);
-        uiCreator.draw(scaleAmount, 8, scaleAmount, 14, scaleAmount, 10, dynamicModels);
     }
 
     @Override

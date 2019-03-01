@@ -46,9 +46,10 @@ public class UiCreator {
                      int rightFistAmount,
                      int rightSecondAmount,
                      int rightThirdAmount,
-                     List<DynamicModel> dynamicModels) {
+                     List<DynamicModel> dynamicModels,
+                     float [] viewMatrix) {
         ui.draw();
-        uiMap.draw(dynamicModels);
+        uiMap.draw(dynamicModels, viewMatrix);
         try {
             scale1.draw(leftFirsAmount);
             scale2.draw(leftSecondAmount);

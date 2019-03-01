@@ -19,25 +19,24 @@ import com.application.vr.cardboard.models.interfaces.DynamicModel;
 public class UiMap {
     private final int MAP_CIRCLE_POINTS = 364;
     private final int MAP_USER_POINTS = 368;
+    private final int MAP_ALL_POINTS = 371;
     private FloatBuffer vertexData;
 
     private final int mProgram;
     private int mPositionHandle;
     private int mColorHandle;
     private int mMVPMatrixHandle;
+
     private float[] mModelMatrix = new float[16];
     private float[] mMVPMatrix = new float[16];
     private float[] mEmptyVPMatrix = new float[16];
-
-
     private float[] scaleMatrix = new float[16];
     private float[] translationMatrix = new float[16];
     private float[] rotationMatrix = new float[16];
 
-    private final float vertices[] = new float[371 * 3];
+    private final float vertices[] = new float[MAP_ALL_POINTS * 3];
     private final float map_main_border_color[] = { 0.250f, 0.462f, 0.466f, 0.5f };
     private final float map_user_point_color[] = { 0.560f, 0.078f, 0.078f, 1.0f };
-
 
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
@@ -45,8 +44,8 @@ public class UiMap {
     public UiMap(Context context) {
         prepareData();
         // Prepare shaders and OpenGL program.
-        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader);
-        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader);
+        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader_map);
+        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader_map);
         // Create empty OpenGL Program.
         mProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
         // get handle to vertex shader's vPosition member
@@ -66,24 +65,45 @@ public class UiMap {
         Matrix.translateM(translationMatrix, 0, 0f, -0.65f, 0f);
 
         Matrix.setIdentityM(rotationMatrix, 0);
+        Matrix.rotateM(rotationMatrix, 0, 180, 0f, 1f, 0f);
         Matrix.rotateM(rotationMatrix, 0, 70, 1f, 0f, 0f);
-
-        Matrix.setIdentityM(mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, scaleMatrix, 0, mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, rotationMatrix, 0, mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, mModelMatrix, 0);
-        //Multiply the MVP and the DynamicModel matrices.
-        Matrix.setIdentityM(mMVPMatrix, 0);
     }
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
-    public void draw(List<DynamicModel> dynamicModels) {
+    public void draw(List<DynamicModel> dynamicModels, float [] viewMatrix) {
+
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
+        Matrix.setIdentityM(mModelMatrix, 0);
+//        float[] inv = new float[16];
+//        Matrix.setIdentityM(inv, 0);
+//        Matrix.invertM(inv, 0, viewMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, viewMatrix,0, mModelMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, scaleMatrix, 0, mModelMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, rotationMatrix, 0, mModelMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, mModelMatrix, 0);
 
-        drawModel(dynamicModels);
+        drawModel();
 
+        Matrix.setIdentityM(mMVPMatrix, 0);
+        Matrix.setIdentityM(mEmptyVPMatrix, 0);
+        // Apply the projection and view transformation
+        Matrix.multiplyMM(mMVPMatrix, 0, mModelMatrix,0, mEmptyVPMatrix,0);
+        GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
+
+        // Add program to OpenGL environment
+        GLES30.glUseProgram(mProgram);
+        Matrix.setIdentityM(mModelMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, scaleMatrix, 0, mModelMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, rotationMatrix, 0, mModelMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, mModelMatrix, 0);
+
+        for (DynamicModel dm : dynamicModels) dm.drawMapModel(mPositionHandle, mColorHandle);
+
+        //Multiply the MVP and the DynamicModel matrices.
+        Matrix.setIdentityM(mMVPMatrix, 0);
+        Matrix.setIdentityM(mEmptyVPMatrix, 0);
         // Apply the projection and view transformation
         Matrix.multiplyMM(mMVPMatrix, 0, mModelMatrix,0, mEmptyVPMatrix,0);
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
@@ -92,7 +112,7 @@ public class UiMap {
     private void prepareData() {
         int i = 0;
         // map area (circle)
-        for(; i <364; i++){
+        for(; i <MAP_CIRCLE_POINTS; i++){
             vertices[(i * 3)+ 0] = (float) (0.5 * Math.cos((3.14/180) * (float)i ));
             vertices[(i * 3)+ 1] = (float) (0.5 * Math.sin((3.14/180) * (float)i ));
             vertices[(i * 3)+ 2] = 0;
@@ -123,17 +143,6 @@ public class UiMap {
         vertices[(i * 3)+ 19] = -0.04f;
         vertices[(i * 3)+ 20] = 0f;
 
-        //first scale
-        vertices[(i * 3)+ 12] = 0f;
-        vertices[(i * 3)+ 13] = 0.05f;
-        vertices[(i * 3)+ 14] = 0f;
-        vertices[(i * 3)+ 15] = -0.04f;
-        vertices[(i * 3)+ 16] = -0.04f;
-        vertices[(i * 3)+ 17] = 0f;
-        vertices[(i * 3)+ 18] = 0.04f;
-        vertices[(i * 3)+ 19] = -0.04f;
-        vertices[(i * 3)+ 20] = 0f;
-
         vertexData = ByteBuffer
                 .allocateDirect(vertices.length * 4)
                 .order(ByteOrder.nativeOrder())
@@ -142,7 +151,7 @@ public class UiMap {
         vertexData.position(0);
     }
 
-    private void drawModel(List<DynamicModel> dynamicModels) {
+    private void drawModel() {
         // Set width for lines
         GLES30.glLineWidth(1f);
         // Enable a handle to the triangle vertices

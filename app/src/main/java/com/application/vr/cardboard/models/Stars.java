@@ -20,8 +20,9 @@ import static android.opengl.GLES20.glDrawArrays;
 import static android.opengl.GLES20.glLineWidth;
 import static android.opengl.GLES20.glUniform4f;
 
-public class Stars implements StaticModel {
+public class Stars implements StaticModel, Runnable {
     private FloatBuffer vertexData;
+    private Thread thread;
 
     private final int mProgram;
     private final int mColorHandle;
@@ -37,11 +38,12 @@ public class Stars implements StaticModel {
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
     public Stars(Context context) {
-        prepareData();
+        thread = new Thread(this, "PREPARE");
+        thread.start();
+
         // Prepare shaders and OpenGL program.
         int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader);
         int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader);
-
         // Create empty OpenGL Program.
         mProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
         // get handle to vertex shader's vPosition member
@@ -109,13 +111,20 @@ public class Stars implements StaticModel {
     }
 
     private void drawModel() {
-        // Enable vertex array
-        GLES30.glEnableVertexAttribArray(mPositionHandle);
-        GLES30.glVertexAttribPointer(mPositionHandle, 3, GL_FLOAT, false, 0, vertexData);
-        glLineWidth(1);
-        glUniform4f(mColorHandle, 1.0f, 1.0f, 1.0f, 1.0f);
-        glDrawArrays(GL_POINTS, 0, stars_amount);
-        // Disable vertex array
-        GLES30.glDisableVertexAttribArray(mPositionHandle);
+        if (!thread.isAlive()) {
+            // Enable vertex array
+            GLES30.glEnableVertexAttribArray(mPositionHandle);
+            GLES30.glVertexAttribPointer(mPositionHandle, 3, GL_FLOAT, false, 0, vertexData);
+            glLineWidth(1);
+            glUniform4f(mColorHandle, 1.0f, 1.0f, 1.0f, 1.0f);
+            glDrawArrays(GL_POINTS, 0, stars_amount);
+            // Disable vertex array
+            GLES30.glDisableVertexAttribArray(mPositionHandle);
+        }
+    }
+
+    @Override
+    public void run() {
+        prepareData();
     }
 }

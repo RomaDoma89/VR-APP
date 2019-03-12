@@ -72,7 +72,6 @@ public class UiMap {
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
     public void draw(List<DynamicModel> dynamicModels, float [] viewMatrix) {
-
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
         Matrix.setIdentityM(mModelMatrix, 0);

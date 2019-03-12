@@ -9,6 +9,8 @@ import android.util.Log;
 
 import com.application.vr.cardboard.Camera;
 import com.application.vr.cardboard.FPSCounter;
+import com.application.vr.cardboard.models.Galaxy;
+import com.application.vr.cardboard.models.factories.FactorySun;
 import com.application.vr.cardboard.models.ui_models.UiCreator;
 import com.application.vr.cardboard.models.factories.FactoryAsteroid;
 import com.application.vr.cardboard.models.factories.FactoryPlanet;
@@ -39,6 +41,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     private FPSCounter fpsCounter;
 
     private FactoryPlanet planetFactory;
+    private FactorySun sunFactory;
     private FactoryAsteroid asteroidFactory;
     private FactorySpaceshipCargo cargoFactory;
     private FactorySpaceshipHunter hunterFactory;
@@ -63,6 +66,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         camera = new Camera(mCalculator);
         fpsCounter = new FPSCounter();
 
+        sunFactory = new FactorySun();
         planetFactory = new FactoryPlanet();
         asteroidFactory = new FactoryAsteroid();
         cargoFactory = new FactorySpaceshipCargo();
@@ -106,10 +110,10 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     public void onSurfaceCreated(EGLConfig eglConfig) {
         // Set the background frame color
         GLES30.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        dynamicModels.add(asteroidFactory.create(context, 70, -55, -60, 0f, 0.5f, 0.5f, 10f));
-        dynamicModels.add(asteroidFactory.create(context, -25, -100, -66, 0.5f, 0f, 0.5f, 5f));
-        dynamicModels.add(asteroidFactory.create(context, -40, 35, 30, 0.5f, 0.5f, 0f, 2f));
-        dynamicModels.add(asteroidFactory.create(context, 40, 68, 90, 0.5f, 0.5f, 0f, 8f));
+        dynamicModels.add(asteroidFactory.create(context, 70, -55, -60, 0f, 0.5f, 0.5f, 1f));
+        dynamicModels.add(asteroidFactory.create(context, -25, -100, -66, 0.5f, 0f, 0.5f, 4f));
+        dynamicModels.add(asteroidFactory.create(context, -40, 35, 30, 0.5f, 0.5f, 0f, 3f));
+        dynamicModels.add(asteroidFactory.create(context, 40, 68, 90, 0.5f, 0.5f, 0f, 2f));
 
         dynamicModels.add(cargoFactory.create(context, 16f, -5f, -150f, 0f, 0f, 0f, 0f));
         dynamicModels.add(cargoFactory.create(context, 0f, -15f, -155f, 0f, 0f, 0f, 0f));
@@ -120,8 +124,12 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         dynamicModels.add(hunterFactory.create(context, 30f, 35f, -180f,  0f, 0f, 0f, 0f));
         dynamicModels.add(hunterFactory.create(context, 40f, 75f, -190f,  0f, 0f, 0f, 0f));
 
-        staticModels.add(planetFactory.create(context, 70, -55, -180, 0f, 1f, 0f, 20f));
+        staticModels.add(sunFactory.create(context, -50, 15, 700, 0f, 1f, 0f, 30f));
+        staticModels.add(planetFactory.create(context, 99, -105, -500, 0f, 1f, 0f, 30f));
+        staticModels.add(new Galaxy(context, Galaxy.Size.TEN, Galaxy.Color.YELLOW, -100f, -550f, 0f, 1f, 1f, 0f, 0.8f));
+        staticModels.add(new Galaxy(context, Galaxy.Size.TEN, Galaxy.Color.BLUE, 50f, 550f, 95f, 1f, 0f, 1f, 0.5f));
         staticModels.add(new Stars(context));
+
         uiCreator = new UiCreator(context);
     }
 

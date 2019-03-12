@@ -19,8 +19,15 @@ import static android.opengl.GLES20.glDrawArrays;
 import static android.opengl.GLES20.glLineWidth;
 import static android.opengl.GLES20.glUniform4f;
 
-public class Galaxy implements StaticModel {
+
+/**
+ * Created by using the link :
+ *
+ * http://itinerantgames.tumblr.com/post/78592276402/a-2d-procedural-galaxy-with-c
+ * */
+public class Galaxy implements StaticModel, Runnable {
     private FloatBuffer vertexData;
+    private Thread loadingDataThread;
 
     private final int mProgram;
     private final int mColorHandle;
@@ -29,14 +36,31 @@ public class Galaxy implements StaticModel {
 
     private final float[] mModelMatrix = new float[16];
     private final float[] mMVPMatrix = new float[16];
+    private float [] color;
 
     private final Random random = new Random();
-    private int stars_amount = 5000;
+    private int stars_amount;
+    private float translateX, translateY, translateZ;
+    private float rotationX, rotationY, rotationZ;
+    private float scale;
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
-    public Galaxy(Context context) {
-        prepareData();
+    public Galaxy(Context context, int size, float [] color, float translationX, float translationY, float translationZ,
+                  float rotationX, float rotationY, float rotationZ, float scale) {
+        this.translateX = translationX;
+        this.translateY = translationY;
+        this.translateZ = translationZ;
+        this.rotationX = rotationX;
+        this.rotationY = rotationY;
+        this.rotationZ = rotationZ;
+        this.scale = scale;
+        this.stars_amount = size;
+        this.color = color;
+
+        loadingDataThread = new Thread(this, "PREPARE");
+        loadingDataThread.start();
+
         // Prepare shaders and OpenGL program.
         int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader);
         int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader);
@@ -56,6 +80,11 @@ public class Galaxy implements StaticModel {
     public void prepareModel(){
         Matrix.setIdentityM(mModelMatrix, 0);
         // We can transform, rotate or scale the mModelMatrix here.
+        Matrix.translateM(mModelMatrix, 0, translateX, translateY, translateZ);
+        if (0 != rotationX) Matrix.rotateM(mModelMatrix, 0, 25, rotationX, 0f, 0f);
+        if (0 != rotationY) Matrix.rotateM(mModelMatrix, 0, 25, 0f, rotationY, 0f);
+        if (0 != rotationZ) Matrix.rotateM(mModelMatrix, 0, 25, 0f, 0f, rotationZ);
+        Matrix.scaleM(mModelMatrix, 0,  scale, scale, scale);
 
         // Multiply the MVP and the DynamicModel matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
@@ -75,57 +104,60 @@ public class Galaxy implements StaticModel {
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
     }
 
-    private double rnd;
-    public double getRandom() {
-//        this.rnd ^= (this.rnd << 21);
-//        this.rnd ^= (this.rnd >>> 35);
-//        this.rnd ^= (this.rnd << 4);
-        return this.rnd;
-    }
-
     private void prepareData() {
-        float[] vertex = new float[stars_amount*3];
+        int size = (int) Math.pow(stars_amount, 3) * 3;
+        float[] vertex = new float[size];
 
-        double a = 1; //коэффициент умножения косинуса, пока не вижу зачем делать его отличным от 1
-        double b = 10000; //коэффициент призванный регулировать длину волны (ширину галактических рукавов) порробовать начать с 10000
-        double c = 10000; //сдвиг рукава (закрутка) рлролблвать начать с 10000
-        double d = 0.5d; //коэффициент для увеличения значения косинуса (вытягивания из отрицательных значений) думаю, что около 0.5 будет норм
+        int numArms = 5;
+        float armSeparationDistance = (float) (2 * Math.PI / numArms);
+        float armOffsetMax = 1f;
+        float rotationFactor = 5;
+        float randomOffsetXY = 0.02f;
 
-        double x = 0;
-        double y = 0;
-        double z = 0;
+        int index = 0;
+        for (int i=0; i<stars_amount; i++) {
+            for (int j=0; j<stars_amount; j++) {
+                for (int k=0; k<stars_amount; k++) {
+                    // Choose a distance from the center of the galaxy.
+                    float distance = random.nextFloat();
+                    distance = (float) Math.pow(distance, 2);
 
-        double ro = 0;
-        double phi = 0;
+                    // Choose an angle between 0 and 2 * PI.
+                    float angle = random.nextFloat() * (float) (2 * Math.PI);
+                    float armOffset = random.nextFloat() * armOffsetMax;
+                    armOffset = armOffset - armOffsetMax / 2;
+                    armOffset = armOffset * (1 / distance);
 
-        double dC = 1;
-        double sigma = 1;
+                    float squaredArmOffset = (float)Math.pow(armOffset, 2);
+                    if(armOffset < 0)
+                        squaredArmOffset = squaredArmOffset * -1;
+                    armOffset = squaredArmOffset;
 
-        double f = 1; //попробовать от 1 до 3
+                    float rotation = distance * rotationFactor;
 
-        for (int i=0; i<30000; i++) {
-            x = random.nextDouble();
-            y = random.nextDouble();
-            z = random.nextDouble();
+                    angle = (int)(angle / armSeparationDistance) * armSeparationDistance + armOffset + rotation;
 
-            ro = Math.sqrt(x * x + y * y);
-            if (x == 0) phi= 0;
-            else phi = Math.atan(y / x);
-            z = z;
+                    // Convert polar coordinates to 2D cartesian coordinates.
+                    float starX = (float) Math.cos(angle) * distance;
+                    float starY = (float) Math.sin(angle) * distance;
+                    float starZ = (float) k/5 * random.nextFloat();
 
-            double v3 = random.nextGaussian();
-            double v1 = a * Math.cos(b * ro) + c * phi + d;
-//            double v2 = dC * Math.pow(Math.E, (Math.pow(z, 2)  / 2 / sigma ^ 2) / sigma / (2 * Math.PI) ^ 0.5;
+                    float randomOffsetX = random.nextFloat() * randomOffsetXY;
+                    float randomOffsetY = random.nextFloat() * randomOffsetXY;
 
-//            if (v1 + v2 + v3 > f) {
-                x = x + random.nextGaussian();
-                y = y + random.nextGaussian();
-                z = z + random.nextGaussian();
+                    starX += randomOffsetX;
+                    starY += randomOffsetY;
 
-//            }
+                    // Now we can assign xy coords.
+                    vertex[index] = starX * 100;
+                    ++index;
+                    vertex[index] = starY * 100;
+                    ++index;
+                    vertex[index] = starZ;
+                    ++index;
+                }
+            }
         }
-
-        //TODO put all xyz into vertex array
 
         vertexData = ByteBuffer
                 .allocateDirect(vertex.length * 4)
@@ -136,13 +168,37 @@ public class Galaxy implements StaticModel {
     }
 
     private void drawModel() {
-        // Enable vertex array
-        GLES30.glEnableVertexAttribArray(mPositionHandle);
-        GLES30.glVertexAttribPointer(mPositionHandle, 3, GL_FLOAT, false, 0, vertexData);
-        glLineWidth(1);
-        glUniform4f(mColorHandle, 1.0f, 1.0f, 1.0f, 1.0f);
-        glDrawArrays(GL_POINTS, 0, stars_amount);
-        // Disable vertex array
-        GLES30.glDisableVertexAttribArray(mPositionHandle);
+        if (null != vertexData) {
+            // Enable vertex array
+            GLES30.glEnableVertexAttribArray(mPositionHandle);
+            GLES30.glVertexAttribPointer(mPositionHandle, 3, GL_FLOAT, false, 0, vertexData);
+            glLineWidth(1);
+
+            // Set color for drawing
+            GLES30.glUniform4fv(mColorHandle, 1, color, 0);
+            glDrawArrays(GL_POINTS, 0, (int) Math.pow(stars_amount, 3));
+            // Disable vertex array
+            GLES30.glDisableVertexAttribArray(mPositionHandle);
+        }
+    }
+
+    @Override
+    public void run() {
+        prepareData();
+    }
+
+    public interface Size {
+        int TEN = 10;
+        int TWENTY = 20;
+        int THIRTY = 30;
+        int FORTY = 40;
+        int FIFTY = 50;
+    }
+
+    public interface Color {
+        float [] WHITE = { 1f, 1f, 1f, 1.0f };
+        float [] BLUE = { 0.933f, 0.949f, 0.988f, 1.0f };
+        float [] YELLOW = {0.988f, 0.984f, 0.933f, 1.0f };
+        float [] RED = { 0.988f, 0.949f, 0.933f, 1.0f };
     }
 }

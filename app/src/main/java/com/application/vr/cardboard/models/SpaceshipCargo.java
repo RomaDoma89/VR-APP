@@ -50,18 +50,13 @@ public class SpaceshipCargo implements DynamicModel {
     private TextureLoader lightsTextureLoader;
 
     private final int mMainProgram;
-    private final int mMapProgram;
     private int mMainPositionHandle;
-    private int mMapPositionHandle;
     private int mMainMVPMatrixHandle;
-    private int mMapMVPMatrixHandle;
     private int mUVHandle;
-    private int mColorHandle;
     private float[] mModelMatrix = new float[16];
     private float[] mMVPMatrix = new float[16];
     private float[] translationMatrix = new float[16];
     private float[] rotationMatrix = new float[16];
-    private float[] mEmptyVPMatrix = new float[16];
 
     private float translateX, translateY, translateZ;
     private float rotationX, rotationY, rotationZ;
@@ -92,18 +87,7 @@ public class SpaceshipCargo implements DynamicModel {
         mUVHandle = GLES30.glGetAttribLocation(mMainProgram, "a_UV");
         // get handle to shape's transformation matrix
         mMainMVPMatrixHandle = GLES30.glGetUniformLocation(mMainProgram, "uMVPMatrix");
-
-        int vertexShaderIdForMap = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader_map);
-        int fragmentShaderIdForMap = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader_map);
-        // Create empty OpenGL Program.
-        mMapProgram = ShaderUtils.createProgram(vertexShaderIdForMap, fragmentShaderIdForMap);
-        // get handle to vertex shader's vPosition member
-        mMapPositionHandle = GLES30.glGetAttribLocation(mMapProgram, "vPosition");
-        // get handle to fragment shader's vColor member
-        mColorHandle = GLES30.glGetUniformLocation(mMapProgram, "vColor");
-        // get handle to shape's transformation matrix
-        mMapMVPMatrixHandle = GLES30.glGetUniformLocation(mMapProgram, "uMVPMatrix");
-
+        float[] mEmptyVPMatrix = new float[16];
         Matrix.setIdentityM(mEmptyVPMatrix, 0);
         // Load and parse Blander object.
         this.prepareData(context);
@@ -152,61 +136,20 @@ public class SpaceshipCargo implements DynamicModel {
         GLES30.glUniformMatrix4fv(mMainMVPMatrixHandle, 1, false, mMVPMatrix, 0);
     }
 
-//    @Override
-//    public void draw(float[] mVPMatrix, float[] matrixRotation) {
-//        rotation += 0.3f;
-//        Matrix.setIdentityM(translationMatrix, 0);
-//        Matrix.translateM(translationMatrix, 0, translateX, translateY, translateZ);
-//
-//        Matrix.setIdentityM(rotationMatrix, 0);
-////        Matrix.rotateM(rotationMatrix, 0, rotation, 0.3f, 0.5f, 0f);
-//
-//        Matrix.setIdentityM(mModelMatrix, 0);
-//        Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
-//        // Multiply the MVP and the DynamicModel matrices.
-//        Matrix.setIdentityM(mMVPMatrix, 0);
-//
-//        // Add program to OpenGL environment.
-//        GLES30.glUseProgram(mMainProgram);
-//        // Draw the vertices and the textures for each material of the object.
-//        corpusTextureLoader.bind();
-//
-//        // Enable vertex array
-//        GLES30.glEnableVertexAttribArray(mMainPositionHandle);
-//        GLES30.glEnableVertexAttribArray(mUVHandle);
-//        for (int i=0; i<corpusVertexList.size(); i++)
-//            drawModel(corpusVertexList.get(i), corpusTextureList.get(i), corpusIndicesList.get(i));
-//        corpusTextureLoader.unbind();
-//        lightsTextureLoader.bind();
-//        for (int i=0; i<lightVertexList.size(); i++)
-//            drawModel(lightVertexList.get(i), lightTextureList.get(i), lightIndicesList.get(i));
-//        // Disable vertex array
-//        GLES30.glDisableVertexAttribArray(mMainPositionHandle);
-//        GLES30.glDisableVertexAttribArray(mUVHandle);
-//        lightsTextureLoader.unbind();
-//        // Multiply the MVP and the DynamicModel matrices.
-//        Matrix.setIdentityM(mMVPMatrix, 0);
-//        Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix, 0, mModelMatrix, 0);
-//        GLES30.glUniformMatrix4fv(mMainMVPMatrixHandle, 1, false, mMVPMatrix, 0);
-//    }
-
-    private void drawModel(FloatBuffer vertexBuff, FloatBuffer textureBuffer, ShortBuffer indices) {
-        GLES30.glVertexAttribPointer(mMainPositionHandle, 3, GLES30.GL_FLOAT, false, 0, vertexBuff);
-        GLES30.glVertexAttribPointer(mUVHandle, 2, GLES30.GL_FLOAT, false, 0, textureBuffer);
-        glDrawElements(GL_TRIANGLES, indices.limit(), GL_UNSIGNED_SHORT, indices);
-    }
-
     @Override
     public void drawMapModel(int positionHandle, int colorHandle) {
-//        // Add program to OpenGL environment
-//        GLES30.glUseProgram(mMapProgram);
-
         GLES30.glEnableVertexAttribArray(positionHandle);
         GLES30.glVertexAttribPointer(positionHandle, 3, GL_FLOAT, false, 0, mapVertices);
         glUniform4f(colorHandle, 1.0f, 1.0f, 0.0f, 1.0f);
         glDrawArrays(GL_POINTS, 0, 1);
         // Disable vertex array
         GLES30.glDisableVertexAttribArray(positionHandle);
+    }
+
+    private void drawModel(FloatBuffer vertexBuff, FloatBuffer textureBuffer, ShortBuffer indices) {
+        GLES30.glVertexAttribPointer(mMainPositionHandle, 3, GLES30.GL_FLOAT, false, 0, vertexBuff);
+        GLES30.glVertexAttribPointer(mUVHandle, 2, GLES30.GL_FLOAT, false, 0, textureBuffer);
+        glDrawElements(GL_TRIANGLES, indices.limit(), GL_UNSIGNED_SHORT, indices);
     }
 
     private Mtl findMtlForName(Iterable<? extends Mtl> mtls, String name) {

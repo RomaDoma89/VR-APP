@@ -45,11 +45,11 @@ public class Planet implements StaticModel {
     private float translationX, translationY, translationZ;
     private float rotationX, rotationY, rotationZ;
     private float scale;
-    
+
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
-    public Planet(Context context, float translationX, float translationY, float translationZ,
+    public Planet(Context context, String texture, float translationX, float translationY, float translationZ,
                   float rotationX, float rotationY, float rotationZ, float scale) {
         this.translationX = translationX;
         this.translationY = translationY;
@@ -72,7 +72,7 @@ public class Planet implements StaticModel {
         mMVPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix");
 
         // Load and parse Blander object.
-        this.prepareData(context);
+        this.prepareData(context, texture);
     }
 
     private float rotation = 0f;
@@ -109,13 +109,13 @@ public class Planet implements StaticModel {
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
     }
 
-    private void prepareData(Context context) {
+    private void prepareData(Context context, String texture) {
         Obj obj = null;
         try {
             InputStream objInputStream = context.getAssets().open("objects/planet.obj");
             obj = ObjUtils.convertToRenderable(ObjReader.read(objInputStream));
             objInputStream.close();
-            textureLoader = new TextureLoader(context, "textures/planet_txr_1.jpg");
+            textureLoader = new TextureLoader(context, texture);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -146,5 +146,10 @@ public class Planet implements StaticModel {
         GLES30.glDisableVertexAttribArray(mPositionHandle);
         GLES30.glDisableVertexAttribArray(mUVHandle);
         textureLoader.unbind();
+    }
+
+    public interface Texture {
+        String MOON = "textures/planet_txr_1.jpg";
+        String SUN = "textures/spaceship_lights_txr.jpg";
     }
 }

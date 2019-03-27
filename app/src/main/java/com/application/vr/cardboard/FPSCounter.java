@@ -13,6 +13,7 @@ public class FPSCounter {
             Log.e("FPSCounter", "fps: " + frames);
             frames = 0;
             startTime = System.nanoTime();
+
         }
     }
 }

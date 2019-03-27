@@ -17,7 +17,6 @@ import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_POINTS;
 import static android.opengl.GLES20.glDrawArrays;
 import static android.opengl.GLES20.glLineWidth;
-import static android.opengl.GLES20.glUniform4f;
 
 
 /**
@@ -58,7 +57,7 @@ public class Galaxy implements StaticModel, Runnable {
         this.stars_amount = size;
         this.color = color;
 
-        loadingDataThread = new Thread(this, "PREPARE");
+        loadingDataThread = new Thread(this, "Galaxy");
         loadingDataThread.start();
 
         // Prepare shaders and OpenGL program.
@@ -77,7 +76,10 @@ public class Galaxy implements StaticModel, Runnable {
         Matrix.setIdentityM(mMVPMatrix, 0);
     }
 
-    public void prepareModel(){
+    /**
+     * Encapsulates the OpenGL ES instructions for drawing this shape.
+     */
+    public void draw(float[] mVPMatrix) {
         Matrix.setIdentityM(mModelMatrix, 0);
         // We can transform, rotate or scale the mModelMatrix here.
         Matrix.translateM(mModelMatrix, 0, translateX, translateY, translateZ);
@@ -88,12 +90,7 @@ public class Galaxy implements StaticModel, Runnable {
 
         // Multiply the MVP and the DynamicModel matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
-    }
 
-    /**
-     * Encapsulates the OpenGL ES instructions for drawing this shape.
-     */
-    public void draw(float[] mVPMatrix) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
 
@@ -187,7 +184,7 @@ public class Galaxy implements StaticModel, Runnable {
         prepareData();
     }
 
-    public interface Size {
+    public interface Density {
         int TEN = 10;
         int TWENTY = 20;
         int THIRTY = 30;

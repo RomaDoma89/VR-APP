@@ -39,11 +39,15 @@ public class UiAim {
     private float[] mModelMatrix = new float[16];
     private float[] mMVPMatrix = new float[16];
     private float[] mEmptyVPMatrix = new float[16];
+    private float xScale;
+    private float yScale;
 
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
-    public UiAim(Context context) {
+    public UiAim(Context context, float xScale, float yScale) {
+        this.xScale = xScale;
+        this.yScale = yScale;
         prepareData(context);
         // Prepare shaders and OpenGL program.
         int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader_uv);
@@ -62,17 +66,20 @@ public class UiAim {
 
     public void prepareModel() {
         Matrix.setIdentityM(mModelMatrix, 0);
+        Matrix.scaleM(mModelMatrix, 0, xScale-0.1f, yScale-0.1f, xScale);
+        Matrix.translateM(mModelMatrix, 0, 0f, 0f, -2f);
+
     }
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
-    public void draw() {
+    public void draw(float[] uiVPMatrix) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
-
+        prepareModel();
         drawModel(textureLoader, vertices, textures, indices);
 
-        Matrix.multiplyMM(mMVPMatrix, 0, mModelMatrix,0, mEmptyVPMatrix,0);
+        Matrix.multiplyMM(mMVPMatrix, 0, uiVPMatrix,0, mModelMatrix,0);
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
     }
 

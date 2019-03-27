@@ -34,11 +34,15 @@ public class UiScale {
 
     private float [] place;
     private float [] color;
+    private float xScale;
+    private float yScale;
 
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
-    public UiScale(Context context, float [] place, float [] color) {
+    public UiScale(Context context, float xScale, float yScale, float [] place, float [] color) {
+        this.xScale = xScale;
+        this.yScale = yScale;
         this.place = place;
         this.color = color;
         prepareData();
@@ -58,10 +62,10 @@ public class UiScale {
 
     public void prepareModel() {
         Matrix.setIdentityM(scaleMatrix, 0);
-        Matrix.scaleM(scaleMatrix, 0, 0.2f, 0.2f, 0.2f);
+        Matrix.scaleM(scaleMatrix, 0, 0.2f*xScale, 0.2f*xScale, 0.2f);
 
         Matrix.setIdentityM(translationMatrix, 0);
-        Matrix.translateM(translationMatrix, 0, place[0], place[1], place[2]);
+        Matrix.translateM(translationMatrix, 0, place[0]*xScale, place[1]*yScale-(xScale+xScale/6), place[2]);
 
         Matrix.setIdentityM(mModelMatrix, 0);
         Matrix.multiplyMM(mModelMatrix, 0, scaleMatrix, 0, mModelMatrix, 0);
@@ -71,15 +75,15 @@ public class UiScale {
         Matrix.setIdentityM(mMVPMatrix, 0);
     }
 
-    public void draw(int amount) throws IncorrectValueException {
+    public void draw(float[] uiVPMatrix, int amount) throws IncorrectValueException {
         if (amount > SCALE_AMOUNT || amount < 0) throw new IncorrectValueException(amount);
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
-
+        prepareModel();
         drawModel(amount);
 
         // Apply the projection and view transformation
-        Matrix.multiplyMM(mMVPMatrix, 0, mModelMatrix,0, mEmptyVPMatrix,0);
+        Matrix.multiplyMM(mMVPMatrix, 0, uiVPMatrix,0, mModelMatrix,0);
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
     }
 
@@ -115,12 +119,12 @@ public class UiScale {
     }
 
     public interface Place {
-        float [] LEFT_1 = {-0.75f, -0.58f, 0f};
-        float [] LEFT_2 = {-0.8f, -0.66f, 0f};
-        float [] LEFT_3 = {-0.75f, -0.74f, 0f};
-        float [] RIGHT_1 = {0.4f, -0.58f, 0f};
-        float [] RIGHT_2 = {0.45f, -0.66f, 0f};
-        float [] RIGHT_3 = {0.4f, -0.74f, 0f};
+        float [] LEFT_1 = {-0.95f, 0.12f, -2f};
+        float [] LEFT_2 = {-0.95f, 0f, -2f};
+        float [] LEFT_3 = {-0.95f, -0.12f, -2f};
+        float [] RIGHT_1 = {0.6f, 0.12f, -2f};
+        float [] RIGHT_2 = {0.6f, -0f, -2f};
+        float [] RIGHT_3 = {0.6f, -0.12f, -2f};
     }
 
     public interface Color {

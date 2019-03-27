@@ -9,5 +9,5 @@ void main() {
     // Note that the uMVPMatrix factor *must be first* in order
     // for the matrix multiplication product to be correct.
     gl_Position = uMVPMatrix * vPosition;
-    gl_PointSize = 1.0;
+    gl_PointSize = 2.0;
 }

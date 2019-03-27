@@ -3,12 +3,13 @@ package com.application.vr.cardboard.models;
 import android.content.Context;
 import android.opengl.GLES30;
 import android.opengl.Matrix;
-import android.util.Log;
 
 import com.application.vr.cardboard.R;
 import com.application.vr.cardboard.file_utils.ShaderUtils;
 import com.application.vr.cardboard.file_utils.TextureLoader;
 import com.application.vr.cardboard.models.interfaces.DynamicModel;
+
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,14 +31,9 @@ import de.javagl.obj.ObjReader;
 import de.javagl.obj.ObjSplitting;
 import de.javagl.obj.ObjUtils;
 
-import static android.opengl.GLES20.GL_FLOAT;
-import static android.opengl.GLES20.GL_POINTS;
 import static android.opengl.GLES20.GL_TRIANGLES;
-import static android.opengl.GLES20.GL_TRIANGLE_STRIP;
 import static android.opengl.GLES20.GL_UNSIGNED_SHORT;
-import static android.opengl.GLES20.glDrawArrays;
 import static android.opengl.GLES20.glDrawElements;
-import static android.opengl.GLES20.glUniform4f;
 
 /**
  * A model for use as a drawn object in OpenGL ES 2.0.
@@ -54,10 +50,11 @@ public class SpaceshipHunter implements DynamicModel {
     private int mMainPositionHandle;
     private int mMainMVPMatrixHandle;
     private int mUVHandle;
-    private float[] mModelMatrix = new float[16];
-    private float[] mMVPMatrix = new float[16];
-    private float[] translationMatrix = new float[16];
-    private float[] rotationMatrix = new float[16];
+    private final float[] mModelMatrix = new float[16];
+    private final float[] mMVPMatrix = new float[16];
+    private final float[] translationMatrix = new float[16];
+    private final float[] rotationMatrix = new float[16];
+    private final float[] map_color = new float[]{ 0.494f, 0.211f, 0.188f, 1.0f };
 
     private float translateX, translateY, translateZ;
     private float rotationX, rotationY, rotationZ;
@@ -91,8 +88,23 @@ public class SpaceshipHunter implements DynamicModel {
     }
 
     @Override
-    public void prepareModel(){}
+    public float[] getPosition() {
+        return new float[] {translateX/800, translateY/800, translateZ/800};
+    }
 
+    @Override
+    public float[] getMapColor() {
+        return map_color;
+    }
+
+    @Override
+    public void moveByCamera(@Nullable float[] forwardVec, float speed) {
+        if (null != forwardVec) {
+            translateX -= forwardVec[0] * speed;
+            translateY -= forwardVec[1] * speed;
+            translateZ -= forwardVec[2] * speed;
+        }
+    }
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
@@ -104,8 +116,6 @@ public class SpaceshipHunter implements DynamicModel {
 //        Matrix.rotateM(rotationMatrix, 0, rotation, 0.0f, 0.0f, 0.0f);
         Matrix.setIdentityM(mModelMatrix, 0);
         Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
-        // Multiply the MVP and the DynamicModel matrices.
-        Matrix.setIdentityM(mMVPMatrix, 0);
 
         // Add program to OpenGL environment
         GLES30.glUseProgram(mMainProgram);
@@ -116,11 +126,11 @@ public class SpaceshipHunter implements DynamicModel {
         GLES30.glEnableVertexAttribArray(mUVHandle);
         GLES30.glEnableVertexAttribArray(mMainPositionHandle);
         for (int i=0; i<corpusVertexList.size(); i++)
-            drawModel(corpusVertexList.get(i), corpusTextureList.get(i), corpusIndicesList.get(i));
+            drawVertices(corpusVertexList.get(i), corpusTextureList.get(i), corpusIndicesList.get(i));
         corpusTextureLoader.unbind();
         lightsTextureLoader.bind();
         for (int i=0; i<lightVertexList.size(); i++)
-            drawModel(lightVertexList.get(i), lightTextureList.get(i), lightIndicesList.get(i));
+            drawVertices(lightVertexList.get(i), lightTextureList.get(i), lightIndicesList.get(i));
         lightsTextureLoader.unbind();
         // Multiply the MVP and the DynamicModel matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
@@ -128,17 +138,7 @@ public class SpaceshipHunter implements DynamicModel {
         GLES30.glUniformMatrix4fv(mMainMVPMatrixHandle, 1, false, mMVPMatrix, 0);
     }
 
-    @Override
-    public void drawMapModel(int positionHandle, int colorHandle) {
-        GLES30.glEnableVertexAttribArray(positionHandle);
-        GLES30.glVertexAttribPointer(positionHandle, 3, GL_FLOAT, false, 0, mapVertices);
-        glUniform4f(colorHandle, 0.0f, 1.0f, 1.0f, 1.0f);
-        glDrawArrays(GL_POINTS, 0, 1);
-        // Disable vertex array
-        GLES30.glDisableVertexAttribArray(positionHandle);
-    }
-
-    private void drawModel(FloatBuffer vertexBuff, FloatBuffer textureBuffer, ShortBuffer indices) {
+    private void drawVertices(FloatBuffer vertexBuff, FloatBuffer textureBuffer, ShortBuffer indices) {
         GLES30.glVertexAttribPointer(mMainPositionHandle, 3, GLES30.GL_FLOAT, false, 0, vertexBuff);
         GLES30.glVertexAttribPointer(mUVHandle, 2, GLES30.GL_FLOAT, false, 0, textureBuffer);
         glDrawElements(GL_TRIANGLES, indices.limit(), GL_UNSIGNED_SHORT, indices);
@@ -203,13 +203,6 @@ public class SpaceshipHunter implements DynamicModel {
                 }
             }
         }
-
-        float [] vertex = {translateX/800, translateY/800, translateZ/800};
-        mapVertices = ByteBuffer.allocateDirect(vertex.length * 4)
-                .order(ByteOrder.nativeOrder())
-                .asFloatBuffer();
-        mapVertices.put(vertex);
-        mapVertices.position(0);
     }
 
     private Mtl findMtlForName(Iterable<? extends Mtl> mtls, String name) {

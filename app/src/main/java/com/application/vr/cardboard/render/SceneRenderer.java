@@ -9,18 +9,14 @@ import android.util.Log;
 
 import com.application.vr.cardboard.Camera;
 import com.application.vr.cardboard.FPSCounter;
-import com.application.vr.cardboard.models.Galaxy;
-import com.application.vr.cardboard.models.factories.FactorySun;
+import com.application.vr.cardboard.app_mode.InputMode;
+import com.application.vr.cardboard.levels.TestLevel;
 import com.application.vr.cardboard.models.ui_models.UiCreator;
-import com.application.vr.cardboard.models.factories.FactoryAsteroid;
-import com.application.vr.cardboard.models.factories.FactoryPlanet;
-import com.application.vr.cardboard.models.factories.FactorySpaceshipCargo;
-import com.application.vr.cardboard.models.factories.FactorySpaceshipHunter;
-import com.application.vr.cardboard.models.Stars;
 import com.application.vr.cardboard.models.interfaces.DynamicModel;
 import com.application.vr.cardboard.models.interfaces.StaticModel;
 import com.application.vr.cardboard.motion.DeviceSensorListener;
 import com.application.vr.cardboard.motion.MotionCalculator;
+import com.application.vr.cardboard.motion.MotionInterpolator;
 import com.google.vr.sdk.base.Eye;
 import com.google.vr.sdk.base.GvrView;
 import com.google.vr.sdk.base.HeadTransform;
@@ -32,19 +28,15 @@ import java.util.List;
 import javax.microedition.khronos.egl.EGLConfig;
 
 public class SceneRenderer implements GvrView.StereoRenderer {
+
     private static final String TAG = "SceneRenderer";
     private static final float Z_NEAR = 1f;
     private static final float Z_FAR = 1100.0f;
+    private int INPUT_MODE;
 
     private Context context;
     private Camera camera;
     private FPSCounter fpsCounter;
-
-    private FactoryPlanet planetFactory;
-    private FactorySun sunFactory;
-    private FactoryAsteroid asteroidFactory;
-    private FactorySpaceshipCargo cargoFactory;
-    private FactorySpaceshipHunter hunterFactory;
 
     private List<DynamicModel> dynamicModels;
     private List<StaticModel> staticModels;
@@ -53,103 +45,106 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     // dynamicVPMatrix is an abbreviation for "View Projection Matrix"
     private final float[] dynamicVPMatrix = new float[16];
     private final float[] staticVPMatrix = new float[16];
-    private final float[] mProjectionMatrix = new float[16];
+    private final float[] uiVPMatrix = new float[16];
 
-    public SceneRenderer(Context context, SensorManager mSensorManage, Sensor accelerom, Sensor magnetic) {
-        DeviceSensorListener sensorListener = new DeviceSensorListener(mSensorManage, accelerom, magnetic);
+    public SceneRenderer(Context context, int inputMode) {
+        this.context = context;
+        this.INPUT_MODE = inputMode;
+
+        SensorManager mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
+        Sensor accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        DeviceSensorListener sensorListener = new DeviceSensorListener(mSensorManager, accelerometer);
         MotionCalculator mCalculator = new MotionCalculator(sensorListener);
 
-        this.context = context;
+        camera = new Camera(mCalculator);
         dynamicModels = new ArrayList<>();
         staticModels = new ArrayList<>();
 
-        camera = new Camera(mCalculator);
         fpsCounter = new FPSCounter();
-
-        sunFactory = new FactorySun();
-        planetFactory = new FactoryPlanet();
-        asteroidFactory = new FactoryAsteroid();
-        cargoFactory = new FactorySpaceshipCargo();
-        hunterFactory = new FactorySpaceshipHunter();
     }
 
+    private float[] eulerAngles = new float[3];
+    private float[] viewMatrix = new float[16];
     @Override
     public void onNewFrame(HeadTransform headTransform) {
         // Draw background color
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT | GLES30.GL_DEPTH_BUFFER_BIT);
         // Clear depth buffer
         GLES30.glEnable(GLES30.GL_DEPTH_TEST);
-        // Cull back faces
-        //GLES30.glEnable(GLES30.GL_CULL_FACE);
+        // Initialize a new forward vector;
+        float[] forwardVec = new float[3];
 
-        camera.transform();
-        Matrix.multiplyMM(dynamicVPMatrix, 0, mProjectionMatrix, 0, camera.getCompleteViewMatrix(), 0);
-        Matrix.multiplyMM(staticVPMatrix, 0, mProjectionMatrix, 0, camera.getRotatedViewMatrix(), 0);
+        //Transform camera for InputMode.ACCELEROMETER:
+        if (INPUT_MODE == InputMode.ACCELEROM) {
+            camera.transform();
+            // Update the current forward vector
+            camera.getForwardVec(forwardVec);
+            camera.getEulerAngles(eulerAngles);
+            viewMatrix = camera.getCompleteViewMatrix();
+        }
 
-        for (DynamicModel m : dynamicModels) m.prepareModel();
-        for (StaticModel m : staticModels) m.prepareModel();
-        uiCreator.prepareModel();
+        // Get a new forward vector for InputMode.GYROSCOPE:
+        else if (INPUT_MODE == InputMode.GYROSCOPE) {
+            // Update the current forward vector
+            headTransform.getForwardVector(forwardVec, 0);
+            headTransform.getEulerAngles(eulerAngles, 0);
+            headTransform.getHeadView(viewMatrix, 0);
+        }
 
-        Matrix.setIdentityM(tmp, 0);
-//        Matrix.rotateM(tmp, 0, camera.getRotatedViewMatrix(), 0 , 180, 0, 1f, 0f);
-//        Matrix.rotateM(tmp, 0 , 180, 0, 0f, 1f);
-
+        // Update speed value
+        float speed = camera.getSpeed();
+        // Move the dynamic models to implement the camera movement
+        for (DynamicModel m : dynamicModels) m.moveByCamera(forwardVec, speed);
         // Log FPS
         fpsCounter.logFrame();
-
     }
-    private float[] tmp = new float[16];
+
     @Override
     public void onDrawEye(Eye eye) {
-        uiCreator.draw(10, 8, 6, 14, 20, 10, dynamicModels, camera.getRotatedViewMatrix());
+        float[] perspective = eye.getPerspective(Z_NEAR, Z_FAR);
+        if (INPUT_MODE == InputMode.ACCELEROM) {
+            Matrix.multiplyMM(dynamicVPMatrix, 0, perspective, 0, camera.getCompleteViewMatrix(), 0);
+            Matrix.multiplyMM(staticVPMatrix, 0, perspective, 0, camera.getCompleteViewMatrix(), 0);
+        } else if (INPUT_MODE == InputMode.GYROSCOPE){
+            // Get an eye view matrix and interpolate it to reduce camera shaking
+            float[] normalizedEyeView = MotionInterpolator.interpolateView(eye.getEyeView());
+            Matrix.multiplyMM(dynamicVPMatrix, 0, perspective, 0, normalizedEyeView, 0);
+            Matrix.multiplyMM(staticVPMatrix, 0, perspective, 0, normalizedEyeView, 0);
+        }
+
+        Matrix.multiplyMM(uiVPMatrix, 0, perspective, 0, camera.getUiViewMatrix(), 0);
+        //Draw all models including UI elements.
+        drawModel();
+    }
+
+    private void drawModel() {
+        // Draw the dynamic models with imitating camera movement
         for (DynamicModel m : dynamicModels) m.draw(dynamicVPMatrix);
+        // Draw the static models without movement
         for (StaticModel m : staticModels) m.draw(staticVPMatrix);
+        // Draw the UI elements including the map with the dynamic models
+        uiCreator.draw(uiVPMatrix, viewMatrix, dynamicModels, 10, 8, 6, 14, 20, 10);
     }
 
     @Override
     public void onSurfaceCreated(EGLConfig eglConfig) {
         // Set the background frame color
         GLES30.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        dynamicModels.add(asteroidFactory.create(context, 70, -55, -60, 0f, 0.5f, 0.5f, 1f));
-        dynamicModels.add(asteroidFactory.create(context, -25, -100, -66, 0.5f, 0f, 0.5f, 4f));
-        dynamicModels.add(asteroidFactory.create(context, -40, 35, 30, 0.5f, 0.5f, 0f, 3f));
-        dynamicModels.add(asteroidFactory.create(context, 40, 68, 90, 0.5f, 0.5f, 0f, 2f));
-
-        dynamicModels.add(cargoFactory.create(context, 16f, -5f, -150f, 0f, 0f, 0f, 0f));
-        dynamicModels.add(cargoFactory.create(context, 0f, -15f, -155f, 0f, 0f, 0f, 0f));
-        dynamicModels.add(cargoFactory.create(context, -19f, -10f, -140f, 0f, 0f, 0f, 0f));
-
-        dynamicModels.add(hunterFactory.create(context, 10f, 25f, -170f,  0f, 0f, 0f, 0f));
-        dynamicModels.add(hunterFactory.create(context, 20f, 55f, -180f,  0f, 0f, 0f, 0f));
-        dynamicModels.add(hunterFactory.create(context, 30f, 35f, -180f,  0f, 0f, 0f, 0f));
-        dynamicModels.add(hunterFactory.create(context, 40f, 75f, -190f,  0f, 0f, 0f, 0f));
-
-        staticModels.add(sunFactory.create(context, -50, 15, 700, 0f, 1f, 0f, 30f));
-        staticModels.add(planetFactory.create(context, 99, -105, -500, 0f, 1f, 0f, 30f));
-        staticModels.add(new Galaxy(context, Galaxy.Size.TEN, Galaxy.Color.YELLOW, -100f, -550f, 0f, 1f, 1f, 0f, 0.8f));
-        staticModels.add(new Galaxy(context, Galaxy.Size.TEN, Galaxy.Color.BLUE, 50f, 550f, 95f, 1f, 0f, 1f, 0.5f));
-        staticModels.add(new Stars(context));
-
-        uiCreator = new UiCreator(context);
+        TestLevel.generateAll(context, dynamicModels, staticModels);
+//        uiCreator = new UiCreator(context, xScale, yScale);
     }
 
     @Override
     public void onSurfaceChanged(int width, int height) {
-        // Adjust the viewport based on geometry changes,
-        // such as screen rotation
-        GLES30.glViewport(0, 0, width, height);
-
-        float ratio = (float) width / height;
-        float fov = 0.75f; // 0.2 to 1.0
-        float size = (float) (Z_NEAR * Math.tan(fov / 2));
-        // This projection matrix is applied to object coordinates in the onDrawFrame() method.
-        Matrix.frustumM(mProjectionMatrix, 0, -size, size, -size/ratio, size/ratio, Z_NEAR, Z_FAR);
+        float xScale = width/1000f;
+        float yScale = height/1000f;
+        //Create an instance of the UiCreator to put screen parameters for scaling
+        uiCreator = new UiCreator(context, xScale, yScale);
     }
 
     @Override
-    public void onRendererShutdown() {
+    public void onRendererShutdown() {}
 
-    }
     @Override
     public void onFinishFrame(Viewport viewport) {
     }
@@ -185,7 +180,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
 //       Rotate X  where θ angle id Degrees
 //    |    1        0        0        0    |
 //    |    0      cos(θ)   sin(θ)     0    |
-//    |    0     -sin(θ)   cos(θ)     0    |
+//    |    0     -sin(θ)   cos(θ)     0    |  [1]
 //    |    0        0        0        1    |
 
 //        Rotate Y
@@ -196,6 +191,11 @@ public class SceneRenderer implements GvrView.StereoRenderer {
 
 //        Rotate Z
 //    |  cos(θ)  -sin(θ)     0        0    |
-//    |  sin(θ)   cos(θ)     0        0    |
+//    |  sin(θ)   cos(θ)     0        0    |  [4] - for Z by Y
 //    |    0        0        1        0    |
+//    |    0        0        0        1    |
+
+//    |  cos(θ)  -sin(θ)  -sin(θ)     0    |
+//    |  sin(θ)   cos(θ)   sin(θ)     0    |
+//    |  sin(θ)  -sin(θ)   cos(θ)     0    |
 //    |    0        0        0        1    |

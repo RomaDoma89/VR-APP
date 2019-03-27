@@ -76,35 +76,33 @@ public class Planet implements StaticModel {
     }
 
     private float rotation = 0f;
-    public void prepareModel(){
-        rotation += 0.05f;
-        if (rotation > 360) rotation -= 360f;
-
-        Matrix.setIdentityM(scaleMatrix, 0);
-        Matrix.scaleM(scaleMatrix, 0, scale, scale, scale);
-        Matrix.setIdentityM(translationMatrix, 0);
-        Matrix.translateM(translationMatrix, 0, translationX, translationY, translationZ);
-        Matrix.setIdentityM(rotationMatrix, 0);
-        Matrix.rotateM(rotationMatrix, 0, rotation, rotationX, rotationY, rotationZ);
-
-        Matrix.setIdentityM(mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, scaleMatrix, 0, mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, rotationMatrix, 0, mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, mModelMatrix, 0);
-
-        // Multiply the MVP and the DynamicModel matrices.
-        Matrix.setIdentityM(mMVPMatrix, 0);
-    }
-
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
     public void draw(float[] mVPMatrix) {
+        rotation += 0.05f;
+        if (rotation > 360) rotation -= 360f;
+
+        Matrix.setIdentityM(scaleMatrix, 0);
+        Matrix.setIdentityM(translationMatrix, 0);
+        Matrix.setIdentityM(rotationMatrix, 0);
+        Matrix.setIdentityM(mModelMatrix, 0);
+
+        Matrix.scaleM(scaleMatrix, 0, scale, scale, scale);
+        Matrix.translateM(translationMatrix, 0, translationX, translationY, translationZ);
+        Matrix.rotateM(rotationMatrix, 0, rotation, rotationX, rotationY, rotationZ);
+
+        Matrix.multiplyMM(mModelMatrix, 0, scaleMatrix, 0, mModelMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, rotationMatrix, 0, mModelMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, mModelMatrix, 0);
+
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
 
         drawModel(verticesBuff, texturesBuff, indicesBuff);
 
+        // Multiply the MVP and the DynamicModel matrices.
+        Matrix.setIdentityM(mMVPMatrix, 0);
         Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix, 0, mModelMatrix, 0);
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
     }

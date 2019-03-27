@@ -2,25 +2,24 @@ package com.application.vr.cardboard.app_mode;
 
 import android.view.View;
 
-import com.application.vr.cardboard.app_mode.AppMode;
 import com.google.vr.sdk.base.GvrView;
 
-public class ModeListener implements View.OnClickListener {
-    private int defMode = AppMode.STEREO;
+public class ScreenModeListener implements View.OnClickListener {
+    private int defMode = ScreenMode.STEREO;
     private GvrView gvrView;
-    public ModeListener(GvrView gvrView) {
+    public ScreenModeListener(GvrView gvrView) {
         this.gvrView = gvrView;
     }
     @Override
     public void onClick(View v) {
         switch (defMode) {
-            case AppMode.STEREO:
+            case ScreenMode.STEREO:
                 gvrView.setStereoModeEnabled(false);
-                defMode = AppMode.MONO;
+                defMode = ScreenMode.MONO;
                 break;
-            case AppMode.MONO:
+            case ScreenMode.MONO:
                 gvrView.setStereoModeEnabled(true);
-                defMode = AppMode.STEREO;
+                defMode = ScreenMode.STEREO;
         }
     }
 }

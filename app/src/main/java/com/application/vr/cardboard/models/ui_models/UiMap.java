@@ -8,7 +8,6 @@ import java.util.List;
 import android.content.Context;
 import android.opengl.GLES30;
 import android.opengl.Matrix;
-import android.util.Log;
 
 import com.application.vr.cardboard.R;
 import com.application.vr.cardboard.file_utils.ShaderUtils;
@@ -43,6 +42,9 @@ public class UiMap {
     private final float vertices[] = new float[MAP_ALL_POINTS * 3];
     private final float map_main_border_color[] = { 0.250f, 0.462f, 0.466f, 0.5f };
     private final float map_user_point_color[] = { 0.560f, 0.078f, 0.078f, 1.0f };
+
+    private boolean isChanged = false;
+    private boolean showMap = true;
 
     private float xScale;
     private float yScale;
@@ -124,7 +126,7 @@ public class UiMap {
         GLES30.glUseProgram(mProgramObj);
 
         prepareModel();
-        drawDynamicModel(dynamicModels, headView);
+        if (showMap) drawDynamicModel(dynamicModels, headView);
 
         //Multiply the MVP and the DynamicModel matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
@@ -186,13 +188,13 @@ public class UiMap {
         // Prepare the model coordinate data
         GLES30.glVertexAttribPointer(mPositionHandleMap, 3, GLES30.GL_FLOAT, false,12, vertexData);
         // Set color for drawing
-        GLES30.glUniform4fv(mColorHandleMap, 1, map_main_border_color, 0);
+        GLES30.glUniform4fv(mColorHandleMap, 1, getMainColor(), 0);
         // Draw the circle
         GLES30.glDrawArrays(GLES30.GL_LINE_LOOP, 0, MAP_CIRCLE);
         // Draw the lines
         GLES30.glDrawArrays(GLES30.GL_LINES, MAP_CIRCLE, 4);
         // Set color for drawing
-        GLES30.glUniform4fv(mColorHandleMap, 1, map_user_point_color, 0);
+        GLES30.glUniform4fv(mColorHandleMap, 1, getUserColor(), 0);
         GLES30.glDrawArrays(GLES30.GL_TRIANGLES, MAP_USER, 3);
         // Disable vertex array
         GLES30.glDisableVertexAttribArray(mPositionHandleMap);
@@ -256,5 +258,20 @@ public class UiMap {
 
         // Disable vertex array
         GLES30.glDisableVertexAttribArray(mPositionHandleObj);
+    }
+
+    public void showMap() {
+        showMap = !showMap;
+    }
+
+    public void changeColor() {
+        if (!isChanged) isChanged = true;
+        else isChanged = false;
+    }
+    private float[] getMainColor() {
+        return isChanged ?  map_user_point_color : map_main_border_color;
+    }
+    private float[] getUserColor() {
+        return isChanged ? map_main_border_color : map_user_point_color;
     }
 }

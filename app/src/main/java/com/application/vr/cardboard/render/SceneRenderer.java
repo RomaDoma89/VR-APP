@@ -10,10 +10,20 @@ import android.util.Log;
 import com.application.vr.cardboard.Camera;
 import com.application.vr.cardboard.FPSCounter;
 import com.application.vr.cardboard.app_mode.InputMode;
+import com.application.vr.cardboard.control.LeftController;
+import com.application.vr.cardboard.control.RightController;
+import com.application.vr.cardboard.control.TopController;
+import com.application.vr.cardboard.control.DownController;
+import com.application.vr.cardboard.control.events.DownEvent;
+import com.application.vr.cardboard.control.events.LeftEvent;
+import com.application.vr.cardboard.control.events.RightEvent;
+import com.application.vr.cardboard.control.events.TopEvent;
 import com.application.vr.cardboard.levels.TestLevel;
+import com.application.vr.cardboard.models.interfaces.Model;
 import com.application.vr.cardboard.models.ui_models.UiCreator;
 import com.application.vr.cardboard.models.interfaces.DynamicModel;
 import com.application.vr.cardboard.models.interfaces.StaticModel;
+import com.application.vr.cardboard.models.ui_models.UiHead;
 import com.application.vr.cardboard.motion.DeviceSensorListener;
 import com.application.vr.cardboard.motion.MotionCalculator;
 import com.application.vr.cardboard.motion.MotionInterpolator;
@@ -38,13 +48,13 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     private Camera camera;
     private FPSCounter fpsCounter;
 
+    private List<Model> allModels;
     private List<DynamicModel> dynamicModels;
     private List<StaticModel> staticModels;
     private UiCreator uiCreator;
 
-    // dynamicVPMatrix is an abbreviation for "View Projection Matrix"
-    private final float[] dynamicVPMatrix = new float[16];
-    private final float[] staticVPMatrix = new float[16];
+    // viewProjectionMatrix is an abbreviation for "View Projection Matrix"
+    private final float[] viewProjectionMatrix = new float[16];
     private final float[] uiVPMatrix = new float[16];
 
     public SceneRenderer(Context context, int inputMode) {
@@ -53,7 +63,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
 
         SensorManager mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         Sensor accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        DeviceSensorListener sensorListener = new DeviceSensorListener(mSensorManager, accelerometer);
+        final DeviceSensorListener sensorListener = new DeviceSensorListener(mSensorManager, accelerometer);
         MotionCalculator mCalculator = new MotionCalculator(sensorListener);
 
         camera = new Camera(mCalculator);
@@ -61,16 +71,27 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         staticModels = new ArrayList<>();
 
         fpsCounter = new FPSCounter();
+        DownController dController = new DownController(sensorListener);
+        Thread dThread = new Thread(dController);
+        dThread.start();
+
+        TopController tController = new TopController(sensorListener);
+        Thread tThread = new Thread(tController);
+        tThread.start();
+
+        RightController rController = new RightController(sensorListener);
+        Thread rThread = new Thread(rController);
+        rThread.start();
+
+        LeftController lController = new LeftController(sensorListener);
+        Thread lThread = new Thread(lController);
+        lThread.start();
     }
 
     private float[] eulerAngles = new float[3];
     private float[] viewMatrix = new float[16];
     @Override
     public void onNewFrame(HeadTransform headTransform) {
-        // Draw background color
-        GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT | GLES30.GL_DEPTH_BUFFER_BIT);
-        // Clear depth buffer
-        GLES30.glEnable(GLES30.GL_DEPTH_TEST);
         // Initialize a new forward vector;
         float[] forwardVec = new float[3];
 
@@ -101,15 +122,18 @@ public class SceneRenderer implements GvrView.StereoRenderer {
 
     @Override
     public void onDrawEye(Eye eye) {
+        // Draw background color
+        GLES30.glClear(GLES30.GL_DEPTH_BUFFER_BIT | GLES30.GL_COLOR_BUFFER_BIT);
+        // Clear depth buffer
+        GLES30.glEnable(GLES30.GL_DEPTH_TEST);
+
         float[] perspective = eye.getPerspective(Z_NEAR, Z_FAR);
         if (INPUT_MODE == InputMode.ACCELEROM) {
-            Matrix.multiplyMM(dynamicVPMatrix, 0, perspective, 0, camera.getCompleteViewMatrix(), 0);
-            Matrix.multiplyMM(staticVPMatrix, 0, perspective, 0, camera.getCompleteViewMatrix(), 0);
+            Matrix.multiplyMM(viewProjectionMatrix, 0, perspective, 0, camera.getCompleteViewMatrix(), 0);
         } else if (INPUT_MODE == InputMode.GYROSCOPE){
             // Get an eye view matrix and interpolate it to reduce camera shaking
             float[] normalizedEyeView = MotionInterpolator.interpolateView(eye.getEyeView());
-            Matrix.multiplyMM(dynamicVPMatrix, 0, perspective, 0, normalizedEyeView, 0);
-            Matrix.multiplyMM(staticVPMatrix, 0, perspective, 0, normalizedEyeView, 0);
+            Matrix.multiplyMM(viewProjectionMatrix, 0, perspective, 0, normalizedEyeView, 0);
         }
 
         Matrix.multiplyMM(uiVPMatrix, 0, perspective, 0, camera.getUiViewMatrix(), 0);
@@ -118,19 +142,17 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     }
 
     private void drawModel() {
-        // Draw the dynamic models with imitating camera movement
-        for (DynamicModel m : dynamicModels) m.draw(dynamicVPMatrix);
-        // Draw the static models without movement
-        for (StaticModel m : staticModels) m.draw(staticVPMatrix);
+        // Draw all existing models
+        for (Model m : allModels) m.draw(viewProjectionMatrix);
         // Draw the UI elements including the map with the dynamic models
-        uiCreator.draw(uiVPMatrix, viewMatrix, dynamicModels, 10, 8, 6, 14, 20, 10);
+        uiCreator.draw(uiVPMatrix, viewMatrix, dynamicModels, camera.getSpeedScaleVal(), 8, 6, 3, 10, 8);
     }
 
     @Override
     public void onSurfaceCreated(EGLConfig eglConfig) {
         // Set the background frame color
         GLES30.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        TestLevel.generateAll(context, dynamicModels, staticModels);
+        allModels = TestLevel.generateAll(context, dynamicModels, staticModels);
 //        uiCreator = new UiCreator(context, xScale, yScale);
     }
 
@@ -140,6 +162,38 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         float yScale = height/1000f;
         //Create an instance of the UiCreator to put screen parameters for scaling
         uiCreator = new UiCreator(context, xScale, yScale);
+    }
+
+    public int putDownEvent(DownEvent e) {
+        if (e.isReached()) {
+            camera.speedDown();
+            uiCreator.removeUiHead(UiHead.Direction.DOWN);
+        }
+        return camera.getSpeedScaleVal();
+    }
+
+    public int putTopEvent(TopEvent e) {
+        if (e.isReached()) {
+            camera.speedUp();
+            uiCreator.removeUiHead(UiHead.Direction.UP);
+        }
+        return camera.getSpeedScaleVal();
+    }
+
+    public int putRightEvent(RightEvent e) {
+//        if (e.isReached()) {
+//            uiCreator.changeColorScheme();
+//            uiCreator.removeUiHead(UiHead.Direction.RIGHT);
+//        }
+        return 0;
+    }
+
+    public int putLeftEvent(LeftEvent e) {
+//        if (e.isReached()) {
+//            uiCreator.showMap();
+//            uiCreator.removeUiHead(UiHead.Direction.LEFT);
+//        }
+        return 0;
     }
 
     @Override

@@ -1,11 +1,13 @@
 package com.application.vr.cardboard;
 
 import android.opengl.Matrix;
+import android.util.Log;
+
 import com.application.vr.cardboard.motion.MotionCalculator;
 
 public class Camera {
     private MotionCalculator mCalculator;
-    private float step = 0.4f;
+    private float step = 0f;
     private long lastTime = System.nanoTime();
     // Keeps all previous rotations and translations.
     private final float[] completeTransformMatrix = new float[16];
@@ -82,7 +84,16 @@ public class Camera {
         return mUiViewMatrix;
     }
 
-    public void setStep(float step) {
-        this.step = step;
+    public void speedUp() {
+        if ((step += 0.2f) > 1f) step = 1f;
+    }
+
+    public void speedDown() {
+        if ((step -= 0.2f) < 0f) step = 0f;
+    }
+
+    public int getSpeedScaleVal() {
+//        Log.e("SPEED", ((int) (step/(0.8f/20f))+" "));
+        return (int) (step/(1/10f));
     }
 }

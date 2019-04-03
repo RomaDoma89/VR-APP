@@ -3,6 +3,7 @@ package com.application.vr.cardboard.models;
 import android.content.Context;
 import android.opengl.GLES30;
 import android.opengl.Matrix;
+import android.util.Log;
 
 import com.application.vr.cardboard.R;
 import com.application.vr.cardboard.file_utils.ShaderUtils;
@@ -101,9 +102,11 @@ public class Galaxy implements StaticModel, Runnable {
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
     }
 
+    private int size = 0;
+    private float[] vertex;
     private void prepareData() {
-        int size = (int) Math.pow(stars_amount, 3) * 3;
-        float[] vertex = new float[size];
+        size = (int) Math.pow(stars_amount, 3) * 3;
+        vertex = new float[size];
 
         int numArms = 5;
         float armSeparationDistance = (float) (2 * Math.PI / numArms);
@@ -169,7 +172,6 @@ public class Galaxy implements StaticModel, Runnable {
             // Enable vertex array
             GLES30.glEnableVertexAttribArray(mPositionHandle);
             GLES30.glVertexAttribPointer(mPositionHandle, 3, GL_FLOAT, false, 0, vertexData);
-            glLineWidth(1);
 
             // Set color for drawing
             GLES30.glUniform4fv(mColorHandle, 1, color, 0);

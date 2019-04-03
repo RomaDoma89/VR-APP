@@ -29,17 +29,22 @@ public class Stars implements StaticModel, Runnable {
     private final int mPositionHandle;
     private final int mMVPMatrixHandle;
 
+    private float[] translateM= new float[16];
+    private float[] scaleM = new float[16];
     private final float[] mModelMatrix = new float[16];
     private final float[] mMVPMatrix = new float[16];
 
     private final Random random = new Random();
-    private int stars_amount = Galaxy.Density.FIFTY;
+    private int stars_amount = 1000;
+    private float translate, scale;
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
-    public Stars(Context context) {
+    public Stars(Context context, float translate, float scale) {
         thread = new Thread(this, "PREPARE");
         thread.start();
+        this.translate = translate;
+        this.scale = scale;
 
         // Prepare shaders and OpenGL program.
         int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader);
@@ -52,19 +57,25 @@ public class Stars implements StaticModel, Runnable {
         mColorHandle = GLES30.glGetUniformLocation(mProgram, "vColor");
         // get handle to shape's transformation matrix
         mMVPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix");
-
-        Matrix.setIdentityM(mMVPMatrix, 0);
     }
 
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
     public void draw(float[] mVPMatrix) {
+        Matrix.setIdentityM(scaleM, 0);
+        Matrix.scaleM(scaleM, 0, scale, scale, scale);
+
+        Matrix.setIdentityM(translateM, 0);
+        Matrix.translateM(translateM, 0, 0f, 0f, translate);
+
+        // We can transform, rotate or scale the mModelMatrix here.
+        Matrix.setIdentityM(mModelMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, scaleM, 0, mModelMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, translateM, 0, mModelMatrix, 0);
+
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
-
-        Matrix.setIdentityM(mModelMatrix, 0);
-        // We can transform, rotate or scale the mModelMatrix here.
 
         //Drawing of the model
         drawModel();
@@ -76,88 +87,27 @@ public class Stars implements StaticModel, Runnable {
     }
 
     private void prepareData() {
-//        float[] vertex = new float[stars_amount*3];
-//
-//        for (int i=0; i<stars_amount; i+=3) {
-//            float x = (random.nextFloat());
-//            float y = (random.nextFloat());
-//            float z = (random.nextFloat());
-//            float r = (float) Math.sqrt(x*x + y*y + z*z);
-//
-//            x /= r;
-//            y /= r;
-//            z /= r;
-//
-//            boolean isNeg1 = random.nextBoolean();
-//            if (isNeg1) vertex[i] = x*-1000;
-//            else vertex[i] = x*1000;
-//            boolean isNeg2 = random.nextBoolean();
-//            if (isNeg2) vertex[i+1] = y*-1000;
-//            else vertex[i+1] = y*1000;
-//            boolean isNeg3 = random.nextBoolean();
-//            if (isNeg3) vertex[i+2] = z*-1000;
-//            else vertex[i+2] = z*1000;
-//        }
-//
-//        vertexData = ByteBuffer
-//                .allocateDirect(vertex.length * 4)
-//                .order(ByteOrder.nativeOrder())
-//                .asFloatBuffer();
-//        vertexData.put(vertex);
-//        vertexData.position(0);
+        float[] vertex = new float[stars_amount*3];
 
-        int size = (int) Math.pow(stars_amount, 3) * 3;
-        float[] vertex = new float[size];
+        for (int i=0; i<stars_amount; i+=3) {
+            float x = (random.nextFloat());
+            float y = (random.nextFloat());
+            float z = (random.nextFloat());
+            float r = (float) Math.sqrt(x*x + y*y + z*z);
 
-        int numArms = 5;
-        float armSeparationDistance = (float) (2 * Math.PI / numArms);
-        float armOffsetMax = 1f;
-        float rotationFactor = 5;
-        float randomOffsetXY = 0.02f;
+            x /= r;
+            y /= r;
+            z /= r;
 
-        int index = 0;
-        for (int i=0; i<stars_amount; i++) {
-            for (int j=0; j<stars_amount; j++) {
-                for (int k=0; k<stars_amount; k++) {
-                    // Choose a distance from the center of the galaxy.
-                    float distance = random.nextFloat();
-                    distance = (float) Math.pow(distance, 2);
-
-                    // Choose an angle between 0 and 2 * PI.
-                    float angle = random.nextFloat() * (float) (2 * Math.PI);
-                    float armOffset = random.nextFloat() * armOffsetMax;
-                    armOffset = armOffset - armOffsetMax / 2;
-                    armOffset = armOffset * (1 / distance);
-
-                    float squaredArmOffset = (float)Math.pow(armOffset, 2);
-                    if(armOffset < 0)
-                        squaredArmOffset = squaredArmOffset * -1;
-                    armOffset = squaredArmOffset;
-
-                    float rotation = distance * rotationFactor;
-
-                    angle = (int)(angle / armSeparationDistance) * armSeparationDistance + armOffset + rotation;
-
-                    // Convert polar coordinates to 2D cartesian coordinates.
-                    float starX = (float) Math.cos(angle) * distance;
-                    float starY = (float) Math.sin(angle) * distance;
-                    float starZ = (float) k/5 * random.nextFloat();
-
-                    float randomOffsetX = random.nextFloat() * randomOffsetXY;
-                    float randomOffsetY = random.nextFloat() * randomOffsetXY;
-
-                    starX += randomOffsetX;
-                    starY += randomOffsetY;
-
-                    // Now we can assign xy coords.
-                    vertex[index] = starX * 100;
-                    ++index;
-                    vertex[index] = starY * 100;
-                    ++index;
-                    vertex[index] = starZ;
-                    ++index;
-                }
-            }
+            boolean isNeg1 = random.nextBoolean();
+            if (isNeg1) vertex[i] = -x*2;
+            else vertex[i] = x*2;
+            boolean isNeg2 = random.nextBoolean();
+            if (isNeg2) vertex[i+1] = -y*2;
+            else vertex[i+1] = y*2;
+            boolean isNeg3 = random.nextBoolean();
+            if (isNeg3) vertex[i+2] = -z*2;
+            else vertex[i+2] = z*2;
         }
 
         vertexData = ByteBuffer

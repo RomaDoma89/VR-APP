@@ -23,8 +23,8 @@ public class MotionCalculator {
 
         // Normalization of the rotation angle
         float xAngle = 0f;
-        if (pitchDegrees < 80 && azimDegrees > 5) xAngle = (90 - pitchDegrees)/100;
-        if (pitchDegrees < 80 && azimDegrees < -5) xAngle = -(90 - pitchDegrees)/100;
+        if (pitchDegrees < 80 && azimDegrees > 5) xAngle = (90 - pitchDegrees)/90;
+        if (pitchDegrees < 80 && azimDegrees < -5) xAngle = -(90 - pitchDegrees)/90;
 
         return xAngle;
     }
@@ -42,7 +42,7 @@ public class MotionCalculator {
 
         // Normalization of the rotation angle
         float zAngle = 0f;
-        if (rollDegrees < -5 || rollDegrees > 5) zAngle = (rollDegrees)/70;
+        if (rollDegrees < -5 || rollDegrees > 5) zAngle = (rollDegrees)/60;
 
         return zAngle;
     }

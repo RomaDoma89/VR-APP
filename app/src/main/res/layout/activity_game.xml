@@ -20,6 +20,22 @@
             android:layout_marginRight="40dp"
             android:layout_gravity="top|end"
             android:background="@android:drawable/ic_menu_view"/>
+
+        <TextView
+            android:id="@+id/leftText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="left|center"
+            android:textColor="@color/colorAccent"
+            android:textSize="10sp"/>
+
+        <TextView
+            android:id="@+id/rightText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right|center"
+            android:textColor="@color/colorAccent"
+            android:textSize="10sp"/>
     </com.google.vr.sdk.base.GvrView>
 
 </RelativeLayout>

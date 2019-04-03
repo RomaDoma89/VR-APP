@@ -16,9 +16,10 @@ import java.nio.FloatBuffer;
  * A test model for use as a drawn object in OpenGL ES 2.0.
  */
 public class UiScale {
-    private final int SCALE_AMOUNT = 20;
+    public static final int MAX_SCALE_VALUE = 5;
 
-    private FloatBuffer vertexData;
+    private FloatBuffer vertexScale;
+    private FloatBuffer vertexLine;
     private final int mProgram;
     private final int mPositionHandle;
     private final int mColorHandle;
@@ -29,8 +30,6 @@ public class UiScale {
 
     private final float[] scaleMatrix = new float[16];
     private final float[] translationMatrix = new float[16];
-
-    private float vertices[] = new float[SCALE_AMOUNT * 3];
 
     private float [] place;
     private float [] color;
@@ -62,7 +61,7 @@ public class UiScale {
 
     public void prepareModel() {
         Matrix.setIdentityM(scaleMatrix, 0);
-        Matrix.scaleM(scaleMatrix, 0, 0.2f*xScale, 0.2f*xScale, 0.2f);
+        Matrix.scaleM(scaleMatrix, 0, 0.4f*xScale, 1f, 0.2f);
 
         Matrix.setIdentityM(translationMatrix, 0);
         Matrix.translateM(translationMatrix, 0, place[0]*xScale, place[1]*yScale-(xScale+xScale/6), place[2]);
@@ -76,7 +75,7 @@ public class UiScale {
     }
 
     public void draw(float[] uiVPMatrix, int amount) throws IncorrectValueException {
-        if (amount > SCALE_AMOUNT || amount < 0) throw new IncorrectValueException(amount);
+        if (amount > 10 || amount < 0) throw new IncorrectValueException(amount);
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
         prepareModel();
@@ -88,43 +87,74 @@ public class UiScale {
     }
 
     private void prepareData() {
-        int i = 0;
-        // map area (circle)
-        for(; i <SCALE_AMOUNT; i++){
-            vertices[(i * 3)+ 0] = (i%2 > 0) ? 0f+(i-1)/10f : 0f+(i)/10f;
-            vertices[(i * 3)+ 1] = (i%2 > 0) ? 0.1f : 0f;
-            vertices[(i * 3)+ 2] = 0f;
+        float scaleVertex[] = new float[MAX_SCALE_VALUE * 6];
+        float lineVertex[] = new float[6];
+        int i=0;
+        for(; i<MAX_SCALE_VALUE; i++){
+            scaleVertex[(i * 6)+ 0] = i/4f;
+            scaleVertex[(i * 6)+ 1] = 0f;
+            scaleVertex[(i * 6)+ 2] = 0f;
+            scaleVertex[(i * 6)+ 3] = (i+1)/4f;
+            scaleVertex[(i * 6)+ 4] = 0f;
+            scaleVertex[(i * 6)+ 5] = 0f;
         }
-        vertexData = ByteBuffer
-                .allocateDirect(vertices.length * 4)
+
+        lineVertex[0] = 0;
+        lineVertex[1] = -0.03f;
+        lineVertex[2] = 0;
+        lineVertex[3] = scaleVertex[scaleVertex.length-3];
+        lineVertex[4] = scaleVertex[scaleVertex.length-2]-0.03f;
+        lineVertex[5] = scaleVertex[scaleVertex.length-1];
+
+        vertexScale = ByteBuffer
+                .allocateDirect(scaleVertex.length * 4)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer();
-        vertexData.put(vertices);
-        vertexData.position(0);
+        vertexScale.put(scaleVertex);
+        vertexScale.position(0);
+
+        vertexLine= ByteBuffer
+                .allocateDirect(lineVertex.length * 4)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer();
+        vertexLine.put(lineVertex);
+        vertexLine.position(0);
     }
 
     private void drawModel(int amount) {
-        // Set width for lines
-        GLES30.glLineWidth(1f);
         // Enable a handle to the triangle vertices
         GLES30.glEnableVertexAttribArray(mPositionHandle);
         // Prepare the model coordinate data
-        GLES30.glVertexAttribPointer(mPositionHandle, 3, GLES30.GL_FLOAT, false,12, vertexData);
+        GLES30.glVertexAttribPointer(mPositionHandle, 3, GLES30.GL_FLOAT, false,0, vertexScale);
         // Set color for drawing
         GLES30.glUniform4fv(mColorHandle, 1, color, 0);
-        GLES30.glDrawArrays(GLES30.GL_LINES, 0, SCALE_AMOUNT);
-        GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, amount);
+        // Set width for lines
+        GLES30.glLineWidth(15f);
+        GLES30.glDrawArrays(GLES30.GL_LINES, 0, amount);
+
+        // Disable vertex array
+        GLES30.glDisableVertexAttribArray(mPositionHandle);
+
+        // Enable a handle to the triangle vertices
+        GLES30.glEnableVertexAttribArray(mPositionHandle);
+        // Prepare the model coordinate data
+        GLES30.glVertexAttribPointer(mPositionHandle, 3, GLES30.GL_FLOAT, false,0, vertexLine);
+        // Set color for drawing
+        GLES30.glUniform4fv(mColorHandle, 1, color, 0);
+        // Set width for lines
+        GLES30.glLineWidth(2f);
+        GLES30.glDrawArrays(GLES30.GL_LINES, 0, 2);
         // Disable vertex array
         GLES30.glDisableVertexAttribArray(mPositionHandle);
     }
 
     public interface Place {
-        float [] LEFT_1 = {-0.95f, 0.12f, -2f};
-        float [] LEFT_2 = {-0.95f, 0f, -2f};
-        float [] LEFT_3 = {-0.95f, -0.12f, -2f};
-        float [] RIGHT_1 = {0.6f, 0.12f, -2f};
+        float [] LEFT_1 = {-1.1f, 0.18f, -2f};
+        float [] LEFT_2 = {-1.1f, 0f, -2f};
+        float [] LEFT_3 = {-1.1f, -0.18f, -2f};
+        float [] RIGHT_1 = {0.6f, 0.18f, -2f};
         float [] RIGHT_2 = {0.6f, -0f, -2f};
-        float [] RIGHT_3 = {0.6f, -0.12f, -2f};
+        float [] RIGHT_3 = {0.6f, -0.18f, -2f};
     }
 
     public interface Color {

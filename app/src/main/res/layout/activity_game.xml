@@ -22,6 +22,18 @@
             android:background="@android:drawable/ic_menu_view"/>
 
         <TextView
+            android:id="@+id/head_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="35dp"
+            android:layout_gravity="top|end"
+            android:layout_marginRight="90dp"
+            android:layout_marginTop="4dp"
+            android:textSize="10sp"
+            android:text="@string/mode_pitch_roll"
+            android:visibility="gone"
+            />
+
+        <TextView
             android:id="@+id/leftText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

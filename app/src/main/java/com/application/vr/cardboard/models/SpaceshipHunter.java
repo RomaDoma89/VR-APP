@@ -104,19 +104,19 @@ public class SpaceshipHunter implements DynamicModel {
             translateY -= forwardVec[1] * speed;
             translateZ -= forwardVec[2] * speed;
         }
-    }
-    /**
-     * Encapsulates the OpenGL ES instructions for drawing this shape.
-     */
-    @Override
-    public void draw(float[] mVPMatrix) {
+
         Matrix.setIdentityM(translationMatrix, 0);
         Matrix.translateM(translationMatrix, 0, translateX, translateY, translateZ);
         Matrix.setIdentityM(rotationMatrix, 0);
 //        Matrix.rotateM(rotationMatrix, 0, rotation, 0.0f, 0.0f, 0.0f);
         Matrix.setIdentityM(mModelMatrix, 0);
         Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
-
+    }
+    /**
+     * Encapsulates the OpenGL ES instructions for drawing this shape.
+     */
+    @Override
+    public void draw(float[] mVPMatrix) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(mMainProgram);
         // Draw the vertices and the textures for each material of the object

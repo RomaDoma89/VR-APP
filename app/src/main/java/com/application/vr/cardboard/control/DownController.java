@@ -6,21 +6,21 @@ import android.util.Log;
 
 import com.application.vr.cardboard.control.events.DownEvent;
 import com.application.vr.cardboard.models.ui_models.UiScale;
-import com.application.vr.cardboard.motion.DeviceSensorListener;
+import com.application.vr.cardboard.motion.AccelerometerListener;
 
 import org.greenrobot.eventbus.EventBus;
 
-public class DownController implements Runnable {
+public class DownController implements IController {
     private static final float NORMAL_VAL = 9.8f;
     private static final float BOUNDARY_VAL = 11.5f;
     private static final float MAXIMUM_VAL = 12f;
 
-    private DeviceSensorListener listener;
+    private AccelerometerListener listener;
     private ToneGenerator toneG;
     private boolean isReadyToListening;
     private float scaleStep;
 
-    public DownController(DeviceSensorListener listener) {
+    public DownController(AccelerometerListener listener) {
         this.listener = listener;
         this.isReadyToListening = true;
         this.toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 30);
@@ -62,6 +62,7 @@ public class DownController implements Runnable {
         }
     }
 
+    @Override
     public void stopListening() {
         isReadyToListening = false;
     }

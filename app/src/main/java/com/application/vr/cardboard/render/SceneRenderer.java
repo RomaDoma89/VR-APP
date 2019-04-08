@@ -9,11 +9,8 @@ import android.util.Log;
 
 import com.application.vr.cardboard.Camera;
 import com.application.vr.cardboard.FPSCounter;
-import com.application.vr.cardboard.app_mode.InputMode;
-import com.application.vr.cardboard.control.LeftController;
-import com.application.vr.cardboard.control.RightController;
-import com.application.vr.cardboard.control.TopController;
-import com.application.vr.cardboard.control.DownController;
+import com.application.vr.cardboard.app_mode.HeadMode;
+import com.application.vr.cardboard.control.HeadController;
 import com.application.vr.cardboard.control.events.DownEvent;
 import com.application.vr.cardboard.control.events.LeftEvent;
 import com.application.vr.cardboard.control.events.RightEvent;
@@ -24,9 +21,10 @@ import com.application.vr.cardboard.models.ui_models.UiCreator;
 import com.application.vr.cardboard.models.interfaces.DynamicModel;
 import com.application.vr.cardboard.models.interfaces.StaticModel;
 import com.application.vr.cardboard.models.ui_models.UiHead;
-import com.application.vr.cardboard.motion.DeviceSensorListener;
-import com.application.vr.cardboard.motion.MotionCalculator;
+import com.application.vr.cardboard.motion.AccelerometerListener;
+import com.application.vr.cardboard.motion.GyroscopeListener;
 import com.application.vr.cardboard.motion.MotionInterpolator;
+import com.application.vr.cardboard.motion.MotionManager;
 import com.google.vr.sdk.base.Eye;
 import com.google.vr.sdk.base.GvrView;
 import com.google.vr.sdk.base.HeadTransform;
@@ -42,10 +40,11 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     private static final String TAG = "SceneRenderer";
     private static final float Z_NEAR = 1f;
     private static final float Z_FAR = 1100.0f;
-    private int INPUT_MODE;
+    private int HEAD_MODE;
 
     private Context context;
     private Camera camera;
+    private HeadController headController;
     private FPSCounter fpsCounter;
 
     private List<Model> allModels;
@@ -53,63 +52,44 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     private List<StaticModel> staticModels;
     private UiCreator uiCreator;
 
-    // viewProjectionMatrix is an abbreviation for "View Projection Matrix"
-    private final float[] viewProjectionMatrix = new float[16];
-    private final float[] uiVPMatrix = new float[16];
+    // moveVPMatrix is an abbreviation for "View Projection Matrix"
+    private float[] completeVPMatrix = new float[16];
+    private float[] uiVPMatrix = new float[16];
+    private float[] uiMapViewMatrix = new float[16];
+    // Initialize a new forward vector;
+    private float[] forwardVec = new float[3];
 
     public SceneRenderer(Context context, int inputMode) {
         this.context = context;
-        this.INPUT_MODE = inputMode;
+        this.HEAD_MODE = inputMode;
 
         SensorManager mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         Sensor accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        final DeviceSensorListener sensorListener = new DeviceSensorListener(mSensorManager, accelerometer);
-        MotionCalculator mCalculator = new MotionCalculator(sensorListener);
+        Sensor gyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        AccelerometerListener accListener = new AccelerometerListener(mSensorManager, accelerometer);
+        GyroscopeListener gyrListener = new GyroscopeListener(mSensorManager, gyroscope);
+        MotionManager mCalculator = new MotionManager(accListener, gyrListener);
 
         camera = new Camera(mCalculator);
         dynamicModels = new ArrayList<>();
         staticModels = new ArrayList<>();
+        headController = new HeadController(accListener);
 
         fpsCounter = new FPSCounter();
-        DownController dController = new DownController(sensorListener);
-        Thread dThread = new Thread(dController);
-        dThread.start();
-
-        TopController tController = new TopController(sensorListener);
-        Thread tThread = new Thread(tController);
-        tThread.start();
-
-        RightController rController = new RightController(sensorListener);
-        Thread rThread = new Thread(rController);
-        rThread.start();
-
-        LeftController lController = new LeftController(sensorListener);
-        Thread lThread = new Thread(lController);
-        lThread.start();
     }
 
-    private float[] eulerAngles = new float[3];
-    private float[] viewMatrix = new float[16];
     @Override
     public void onNewFrame(HeadTransform headTransform) {
-        // Initialize a new forward vector;
-        float[] forwardVec = new float[3];
-
-        //Transform camera for InputMode.ACCELEROMETER:
-        if (INPUT_MODE == InputMode.ACCELEROM) {
+        if (HEAD_MODE == HeadMode.FREE_HEAD) {
+            // Update the current forward vector
+            headTransform.getForwardVector(forwardVec, 0);
+            headTransform.getHeadView(uiMapViewMatrix, 0);
+        } else {
+            // Compute the view point matrix
             camera.transform();
             // Update the current forward vector
             camera.getForwardVec(forwardVec);
-            camera.getEulerAngles(eulerAngles);
-            viewMatrix = camera.getCompleteViewMatrix();
-        }
-
-        // Get a new forward vector for InputMode.GYROSCOPE:
-        else if (INPUT_MODE == InputMode.GYROSCOPE) {
-            // Update the current forward vector
-            headTransform.getForwardVector(forwardVec, 0);
-            headTransform.getEulerAngles(eulerAngles, 0);
-            headTransform.getHeadView(viewMatrix, 0);
+            uiMapViewMatrix = camera.getCompleteView();
         }
 
         // Update speed value
@@ -128,24 +108,21 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         GLES30.glEnable(GLES30.GL_DEPTH_TEST);
 
         float[] perspective = eye.getPerspective(Z_NEAR, Z_FAR);
-        if (INPUT_MODE == InputMode.ACCELEROM) {
-            Matrix.multiplyMM(viewProjectionMatrix, 0, perspective, 0, camera.getCompleteViewMatrix(), 0);
-        } else if (INPUT_MODE == InputMode.GYROSCOPE){
+        if (HEAD_MODE == HeadMode.FREE_HEAD) {
             // Get an eye view matrix and interpolate it to reduce camera shaking
             float[] normalizedEyeView = MotionInterpolator.interpolateView(eye.getEyeView());
-            Matrix.multiplyMM(viewProjectionMatrix, 0, perspective, 0, normalizedEyeView, 0);
+            Matrix.multiplyMM(uiVPMatrix, 0, perspective, 0, camera.getStraightView(), 0);
+            Matrix.multiplyMM(completeVPMatrix, 0, perspective, 0, normalizedEyeView, 0);
+        } else {
+            Matrix.multiplyMM(uiVPMatrix, 0, perspective, 0, camera.getYawView(), 0);
+            Matrix.multiplyMM(completeVPMatrix, 0, perspective, 0, camera.getCompleteView(), 0);
         }
 
-        Matrix.multiplyMM(uiVPMatrix, 0, perspective, 0, camera.getUiViewMatrix(), 0);
         //Draw all models including UI elements.
-        drawModel();
-    }
-
-    private void drawModel() {
-        // Draw all existing models
-        for (Model m : allModels) m.draw(viewProjectionMatrix);
+        for (Model m : allModels) m.draw(completeVPMatrix);
         // Draw the UI elements including the map with the dynamic models
-        uiCreator.draw(uiVPMatrix, viewMatrix, dynamicModels, camera.getSpeedScaleVal(), 8, 6, 3, 10, 8);
+        uiCreator.draw(uiVPMatrix, uiMapViewMatrix, dynamicModels, camera.getSpeedScaleVal(),
+                8, 6, 3, 10, 8);
     }
 
     @Override
@@ -153,7 +130,6 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         // Set the background frame color
         GLES30.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         allModels = TestLevel.generateAll(context, dynamicModels, staticModels);
-//        uiCreator = new UiCreator(context, xScale, yScale);
     }
 
     @Override
@@ -162,6 +138,10 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         float yScale = height/1000f;
         //Create an instance of the UiCreator to put screen parameters for scaling
         uiCreator = new UiCreator(context, xScale, yScale);
+    }
+
+    public void setHeadMode(int HEAD_MODE) {
+        this.HEAD_MODE = HEAD_MODE;
     }
 
     public int putDownEvent(DownEvent e) {

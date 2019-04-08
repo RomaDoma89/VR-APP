@@ -5,17 +5,17 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
-public class DeviceSensorListener implements SensorEventListener {
-    private float[] updatedValues = new float[3];
+public class AccelerometerListener implements SensorEventListener {
+    private float[] updatedValuesACC = new float[3];
 
-    public DeviceSensorListener(SensorManager mSensorManage, Sensor accelerom) {
+    public AccelerometerListener(SensorManager mSensorManage, Sensor accelerom) {
         mSensorManage.registerListener(this, accelerom, SensorManager.SENSOR_DELAY_GAME);
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            updatedValues = MotionInterpolator.interpolateXYZ(event.values);
+            updatedValuesACC = MotionInterpolator.interpolateXYZ(event.values);
         }
     }
 
@@ -23,12 +23,12 @@ public class DeviceSensorListener implements SensorEventListener {
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     public float getX() {
-        return updatedValues[0];
+        return updatedValuesACC[0];
     }
     public float getY() {
-        return updatedValues[1];
+        return updatedValuesACC[1];
     }
     public float getZ() {
-        return updatedValues[2];
+        return updatedValuesACC[2];
     }
 }

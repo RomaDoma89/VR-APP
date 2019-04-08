@@ -1,17 +1,19 @@
 package com.application.vr.cardboard.motion;
 
-public class MotionCalculator {
+public class MotionManager {
 
-    private DeviceSensorListener sensorListener;
+    private AccelerometerListener accListener;
+    private GyroscopeListener gyrListener;
 
-    public MotionCalculator(DeviceSensorListener sensorListener) {
-        this.sensorListener = sensorListener;
+    public MotionManager(AccelerometerListener accListener, GyroscopeListener gyrListener) {
+        this.accListener = accListener;
+        this.gyrListener = gyrListener;
     }
 
     public float getPitch() {
-        float x = sensorListener.getX();
-        float y = sensorListener.getY();
-        float z = sensorListener.getZ();
+        float x = accListener.getX();
+        float y = accListener.getY();
+        float z = accListener.getZ();
 
         // Calculations based on new accelerometer data.
         float pitch = (float) Math.atan(x/Math.sqrt(Math.pow(y,2) + Math.pow(z,2)));
@@ -30,9 +32,9 @@ public class MotionCalculator {
     }
 
     public float getRoll() {
-        float x = sensorListener.getX();
-        float y = sensorListener.getY();
-        float z = sensorListener.getZ();
+        float x = accListener.getX();
+        float y = accListener.getY();
+        float z = accListener.getZ();
 
         // Calculations based on new accelerometer data.
         float roll = (float) Math.atan(y/Math.sqrt(Math.pow(x,2) + Math.pow(z,2)));
@@ -45,5 +47,9 @@ public class MotionCalculator {
         if (rollDegrees < -5 || rollDegrees > 5) zAngle = (rollDegrees)/60;
 
         return zAngle;
+    }
+
+    public float getYaw() {
+        return -gyrListener.getA();
     }
 }

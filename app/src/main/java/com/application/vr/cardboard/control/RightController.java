@@ -5,20 +5,19 @@ import android.media.ToneGenerator;
 import android.util.Log;
 
 import com.application.vr.cardboard.control.events.RightEvent;
-import com.application.vr.cardboard.models.ui_models.UiScale;
-import com.application.vr.cardboard.motion.DeviceSensorListener;
+import com.application.vr.cardboard.motion.AccelerometerListener;
 
 import org.greenrobot.eventbus.EventBus;
 
-public class RightController implements Runnable {
+public class RightController implements IController {
     private static final float BOUNDARY_VAL = 5f;
     private static final float BOUNDARY_VAL_MAX = 6f;
 
-    private DeviceSensorListener listener;
+    private AccelerometerListener listener;
     private ToneGenerator toneG;
     private boolean isReadyToListening;
 
-    public RightController(DeviceSensorListener listener) {
+    public RightController(AccelerometerListener listener) {
         this.listener = listener;
         this.isReadyToListening = true;
         this.toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 30);
@@ -57,6 +56,7 @@ public class RightController implements Runnable {
         }
     }
 
+    @Override
     public void stopListening() {
         isReadyToListening = false;
     }

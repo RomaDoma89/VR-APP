@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">Cardboard Space</string>
+    <string name="app_name">100500</string>
+
+    <string name="mode_free_head">FREE\nHEAD</string>
+    <string name="mode_pitch_roll">PITCH\nROLL</string>
+    <string name="mode_pitch_roll_yaw">PITCH\nROLL\nYAW</string>
 </resources>

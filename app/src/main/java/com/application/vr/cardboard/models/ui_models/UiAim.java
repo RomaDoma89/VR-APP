@@ -38,7 +38,6 @@ public class UiAim {
     private int mMVPMatrixHandle;
     private float[] mModelMatrix = new float[16];
     private float[] mMVPMatrix = new float[16];
-    private float[] mEmptyVPMatrix = new float[16];
     private float xScale;
     private float yScale;
 
@@ -60,8 +59,6 @@ public class UiAim {
         mUVHandle = GLES30.glGetAttribLocation(mProgram, "a_UV");
         // get handle to shape's transformation matrix
         mMVPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix");
-
-        Matrix.setIdentityM(mEmptyVPMatrix, 0);
     }
 
     public void prepareModel() {

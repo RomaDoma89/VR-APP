@@ -25,13 +25,13 @@ public class Camera {
         Matrix.setIdentityM(Y_matrix, 0);
         Matrix.setIdentityM(PRY_matrix, 0);
         // Should be initialized with initial values only once.
-        Matrix.setLookAtM(viewStraight, 0, 0, 0, 0, 0, 0, -10, 0, 1, 0);
+        Matrix.setLookAtM(viewStraight, 0, 0, 0, 0.1f, 0, 0, -10000, 0, 1, 0);
     }
 
     public void transform() {
         // Set all view matrices at the origin and set a new view point.
-        Matrix.setLookAtM(viewPitchRollYaw, 0, 0, 0, 0, 0, 0, -1100, 0, 1, 0);
-        Matrix.setLookAtM(viewYaw, 0, 0, 0, 0, 0, 0, -1100, 0, 1, 0);
+        Matrix.setLookAtM(viewPitchRollYaw, 0, 0, 0, 0.1f, 0, 0, -10000, 0, 1, 0);
+        Matrix.setLookAtM(viewYaw, 0, 0, 0, 0.1f, 0, 0, -10000, 0, 1, 0);
 
         Matrix.setIdentityM(newPitchRotationM, 0);
         Matrix.rotateM(newPitchRotationM, 0, mManager.getPitch(), 1.0f, 0.0f, 0.0f);

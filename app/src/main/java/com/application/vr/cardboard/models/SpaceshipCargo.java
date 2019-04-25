@@ -39,11 +39,11 @@ import static android.opengl.GLES20.glDrawElements;
  * A model for use as a drawn object in OpenGL ES 2.0.
  */
 public class SpaceshipCargo implements DynamicModel {
-    private List<FloatBuffer> corpusVertexList, corpusTextureList, lightVertexList, lightTextureList;
-    private List<ShortBuffer> corpusIndicesList, lightIndicesList;
+    private FloatBuffer corpus_vrtx, corpus_texr, corpus_norm, window_vrtx, window_texr, window_norm;
+    private ShortBuffer corpus_indx, window_indx;
 
-    private TextureLoader corpusTextureLoader;
-    private TextureLoader lightsTextureLoader;
+    private TextureLoader corpus_tl;
+    private TextureLoader window_tl;
 
     private final int mMainProgram;
     private int mMainPositionHandle;
@@ -74,8 +74,8 @@ public class SpaceshipCargo implements DynamicModel {
         this.scale = scale;
 
         // Prepare shaders and OpenGL program.
-        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader_uv);
-        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader_uv);
+        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vs_simple_uv);
+        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fs_simple_uv);
         // Create empty OpenGL Program.
         mMainProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
         // get handle to vertex shader's vPosition member
@@ -88,6 +88,13 @@ public class SpaceshipCargo implements DynamicModel {
         Matrix.setIdentityM(mEmptyVPMatrix, 0);
         // Load and parse Blander object.
         this.prepareData(context);
+    }
+    private void prepareModel() {
+        Matrix.setIdentityM(translationMatrix, 0);
+        Matrix.translateM(translationMatrix, 0, translateX, translateY, translateZ);
+        Matrix.setIdentityM(rotationMatrix, 0);
+        Matrix.setIdentityM(mModelMatrix, 0);
+        Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
     }
 
     @Override
@@ -111,35 +118,35 @@ public class SpaceshipCargo implements DynamicModel {
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
     @Override
-    public void draw(float[] mVPMatrix) {
-        Matrix.setIdentityM(translationMatrix, 0);
-        Matrix.translateM(translationMatrix, 0, translateX, translateY, translateZ);
-        Matrix.setIdentityM(rotationMatrix, 0);
-        Matrix.setIdentityM(mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
-
+    public void draw(float[] mVPMatrix, float[] mViewMatrix) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(mMainProgram);
-        // Draw the vertices and the textures for each material of the object
-        corpusTextureLoader.bind();
 
-        // Enable vertex array
-        GLES30.glEnableVertexAttribArray(mMainPositionHandle);
-        GLES30.glEnableVertexAttribArray(mUVHandle);
-        for (int i=0; i<corpusVertexList.size(); i++)
-            drawVertices(corpusVertexList.get(i), corpusTextureList.get(i), corpusIndicesList.get(i));
-        corpusTextureLoader.unbind();
-        lightsTextureLoader.bind();
-        for (int i=0; i<lightVertexList.size(); i++)
-            drawVertices(lightVertexList.get(i), lightTextureList.get(i), lightIndicesList.get(i));
-        // Disable vertex array
-        GLES30.glDisableVertexAttribArray(mMainPositionHandle);
-        GLES30.glDisableVertexAttribArray(mUVHandle);
-        lightsTextureLoader.unbind();
         // Multiply the MVP and the DynamicModel matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
         Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix, 0, mModelMatrix, 0);
         GLES30.glUniformMatrix4fv(mMainMVPMatrixHandle, 1, false, mMVPMatrix, 0);
+
+        //Transform model first.
+        prepareModel();
+
+        // Enable vertex array
+        GLES30.glEnableVertexAttribArray(mMainPositionHandle);
+        GLES30.glEnableVertexAttribArray(mUVHandle);
+
+
+        // Draw the vertices and the textures for each material of the object
+        corpus_tl.bind();
+        drawVertices(corpus_vrtx, corpus_texr, corpus_indx);
+        corpus_tl.unbind();
+
+        window_tl.bind();
+        drawVertices(window_vrtx, window_texr, window_indx);
+        window_tl.unbind();
+
+        // Disable vertex array
+        GLES30.glDisableVertexAttribArray(mMainPositionHandle);
+        GLES30.glDisableVertexAttribArray(mUVHandle);
     }
 
     private void drawVertices(FloatBuffer vertexBuff, FloatBuffer textureBuffer, ShortBuffer indices) {
@@ -156,13 +163,6 @@ public class SpaceshipCargo implements DynamicModel {
     }
 
     private void prepareData(Context context) {
-        corpusVertexList = new ArrayList<>();
-        corpusTextureList = new ArrayList<>();
-        corpusIndicesList = new ArrayList<>();
-        lightVertexList = new ArrayList<>();
-        lightTextureList = new ArrayList<>();
-        lightIndicesList = new ArrayList<>();
-
         List<Mtl> mtlList = null;
         Map<String, Obj> materials = null;
         try {
@@ -173,8 +173,8 @@ public class SpaceshipCargo implements DynamicModel {
             InputStream mtlInputStream = context.getAssets().open("objects/space_ship.mtl");
             mtlList = MtlReader.read(mtlInputStream);
 
-            corpusTextureLoader = new TextureLoader(context, "textures/spaceship_corpus_txr.jpg");
-            lightsTextureLoader = new TextureLoader(context, "textures/spaceship_lights_txr.jpg");
+            corpus_tl = new TextureLoader(context, "textures/spaceship_corpus_txr.jpg");
+            window_tl = new TextureLoader(context, "textures/spaceship_lights_txr.jpg");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -194,21 +194,23 @@ public class SpaceshipCargo implements DynamicModel {
 
                     // Extract the geometry data. This data can be used to create
                     // the vertex buffer objects and vertex array objects for OpenGL
-                    corpusVertexList.add(ObjData.getVertices(material));
-                    corpusTextureList.add(ObjData.getTexCoords(material, 2));
+                    corpus_vrtx = (ObjData.getVertices(material));
+                    corpus_texr = (ObjData.getTexCoords(material, 2));
+                    corpus_norm = (ObjData.getVertices(material));
                     IntBuffer intIndices = ObjData.getFaceVertexIndices(material);
                     ShortBuffer indices = ByteBuffer.allocateDirect(intIndices.limit() * 2).order(ByteOrder.nativeOrder()).asShortBuffer();
                     while (intIndices.hasRemaining()) indices.put((short) intIndices.get());
                     indices.rewind();
-                    corpusIndicesList.add(indices);
+                    corpus_indx = (indices);
                 } else if (materialName.contains("engine_light") || materialName.contains("windows")) {
-                    lightVertexList.add(ObjData.getVertices(material));
-                    lightTextureList.add(ObjData.getTexCoords(material, 2));
+                    window_vrtx = (ObjData.getVertices(material));
+                    window_texr = (ObjData.getTexCoords(material, 2));
+                    window_norm = (ObjData.getVertices(material));
                     IntBuffer intIndices = ObjData.getFaceVertexIndices(material);
                     ShortBuffer indices = ByteBuffer.allocateDirect(intIndices.limit() * 2).order(ByteOrder.nativeOrder()).asShortBuffer();
                     while (intIndices.hasRemaining()) indices.put((short) intIndices.get());
                     indices.rewind();
-                    lightIndicesList.add(indices);
+                    window_indx = (indices);
                 }
             }
         }

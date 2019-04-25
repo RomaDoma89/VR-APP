@@ -35,7 +35,7 @@ public class Stars implements StaticModel, Runnable {
     private final float[] mMVPMatrix = new float[16];
 
     private final Random random = new Random();
-    private int stars_amount = 1000;
+    private int stars_amount = 5000;
     private float translate, scale;
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
@@ -47,8 +47,8 @@ public class Stars implements StaticModel, Runnable {
         this.scale = scale;
 
         // Prepare shaders and OpenGL program.
-        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader);
-        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader);
+        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vs_non_texture);
+        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fs_non_texture);
         // Create empty OpenGL Program.
         mProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
         // get handle to vertex shader's vPosition member
@@ -59,31 +59,32 @@ public class Stars implements StaticModel, Runnable {
         mMVPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix");
     }
 
-    /**
-     * Encapsulates the OpenGL ES instructions for drawing this shape.
-     */
-    public void draw(float[] mVPMatrix) {
+    private void prepareModel() {
         Matrix.setIdentityM(scaleM, 0);
         Matrix.scaleM(scaleM, 0, scale, scale, scale);
-
         Matrix.setIdentityM(translateM, 0);
         Matrix.translateM(translateM, 0, 0f, 0f, translate);
-
         // We can transform, rotate or scale the mModelMatrix here.
         Matrix.setIdentityM(mModelMatrix, 0);
         Matrix.multiplyMM(mModelMatrix, 0, scaleM, 0, mModelMatrix, 0);
         Matrix.multiplyMM(mModelMatrix, 0, translateM, 0, mModelMatrix, 0);
-
+    }
+    /**
+     * Encapsulates the OpenGL ES instructions for drawing this shape.
+     */
+    public void draw(float[] mVPMatrix, float[] mViewMatrix) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
-
-        //Drawing of the model
-        drawModel();
 
         // Multiply the MVP and the DynamicModel matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
         Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix, 0, mModelMatrix, 0);
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
+
+        //Transform model matrix
+        prepareModel();
+        //Drawing of the model
+        drawModel();
     }
 
     private void prepareData() {

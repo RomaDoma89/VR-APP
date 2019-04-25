@@ -46,8 +46,8 @@ public class UiScale {
         this.color = color;
         prepareData();
         // Prepare shaders and OpenGL program.
-        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader);
-        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader);
+        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vs_non_texture);
+        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fs_non_texture);
         // Create empty OpenGL Program.
         mProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
         // get handle to vertex shader's vPosition member
@@ -60,50 +60,44 @@ public class UiScale {
     }
 
     public void prepareModel() {
-        Matrix.setIdentityM(scaleMatrix, 0);
-        Matrix.scaleM(scaleMatrix, 0, 0.4f*xScale, 1f, 0.2f);
-
-        Matrix.setIdentityM(translationMatrix, 0);
-        Matrix.translateM(translationMatrix, 0, place[0]*xScale, place[1]*yScale-(xScale+xScale/6), place[2]);
-
         Matrix.setIdentityM(mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, scaleMatrix, 0, mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, mModelMatrix, 0);
-
-        //Multiply the MVP and the DynamicModel matrices.
-        Matrix.setIdentityM(mMVPMatrix, 0);
+        Matrix.translateM(mModelMatrix, 0, place[0]*(xScale*3f), place[1]*(xScale*1.2f)-xScale/1.5f, place[2]*5);
+        Matrix.scaleM(mModelMatrix, 0, 2.5f*xScale, 3f*yScale, 1f);
     }
 
     public void draw(float[] uiVPMatrix, int amount) throws IncorrectValueException {
         if (amount > 10 || amount < 0) throw new IncorrectValueException(amount);
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
-        prepareModel();
-        drawModel(amount);
 
         // Apply the projection and view transformation
+        Matrix.setIdentityM(mMVPMatrix, 0);
         Matrix.multiplyMM(mMVPMatrix, 0, uiVPMatrix,0, mModelMatrix,0);
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
+
+        prepareModel();
+        drawModel(amount);
     }
 
     private void prepareData() {
         float scaleVertex[] = new float[MAX_SCALE_VALUE * 6];
         float lineVertex[] = new float[6];
         int i=0;
+        //Points for scale
         for(; i<MAX_SCALE_VALUE; i++){
-            scaleVertex[(i * 6)+ 0] = i/4f;
+            scaleVertex[(i * 6)+ 0] = i/50f;
             scaleVertex[(i * 6)+ 1] = 0f;
             scaleVertex[(i * 6)+ 2] = 0f;
-            scaleVertex[(i * 6)+ 3] = (i+1)/4f;
+            scaleVertex[(i * 6)+ 3] = (i+1)/50f;
             scaleVertex[(i * 6)+ 4] = 0f;
             scaleVertex[(i * 6)+ 5] = 0f;
         }
-
+        //Points for bottom lines
         lineVertex[0] = 0;
-        lineVertex[1] = -0.03f;
+        lineVertex[1] = 0;
         lineVertex[2] = 0;
         lineVertex[3] = scaleVertex[scaleVertex.length-3];
-        lineVertex[4] = scaleVertex[scaleVertex.length-2]-0.03f;
+        lineVertex[4] = scaleVertex[scaleVertex.length-2];
         lineVertex[5] = scaleVertex[scaleVertex.length-1];
 
         vertexScale = ByteBuffer
@@ -129,7 +123,7 @@ public class UiScale {
         // Set color for drawing
         GLES30.glUniform4fv(mColorHandle, 1, color, 0);
         // Set width for lines
-        GLES30.glLineWidth(15f);
+        GLES30.glLineWidth(10f * xScale);
         GLES30.glDrawArrays(GLES30.GL_LINES, 0, amount);
 
         // Disable vertex array
@@ -149,12 +143,12 @@ public class UiScale {
     }
 
     public interface Place {
-        float [] LEFT_1 = {-1.1f, 0.18f, -2f};
-        float [] LEFT_2 = {-1.1f, 0f, -2f};
-        float [] LEFT_3 = {-1.1f, -0.18f, -2f};
-        float [] RIGHT_1 = {0.6f, 0.18f, -2f};
-        float [] RIGHT_2 = {0.6f, -0f, -2f};
-        float [] RIGHT_3 = {0.6f, -0.18f, -2f};
+        float [] LEFT_1 = {-0.19f, 0.0f, -0.25f};
+        float [] LEFT_2 = {-0.20f, -0.1f, -0.25f};
+        float [] LEFT_3 = {-0.21f, -0.2f, -0.25f};
+        float [] RIGHT_1 = {0.11f, 0.0f, -0.25f};
+        float [] RIGHT_2 = {0.12f, -0.1f, -0.25f};
+        float [] RIGHT_3 = {0.13f, -0.2f, -0.25f};
     }
 
     public interface Color {

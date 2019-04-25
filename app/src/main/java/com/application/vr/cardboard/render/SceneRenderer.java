@@ -3,6 +3,7 @@ package com.application.vr.cardboard.render;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
+import android.opengl.GLES10;
 import android.opengl.GLES30;
 import android.opengl.Matrix;
 import android.util.Log;
@@ -17,10 +18,10 @@ import com.application.vr.cardboard.control.events.RightEvent;
 import com.application.vr.cardboard.control.events.TopEvent;
 import com.application.vr.cardboard.levels.TestLevel;
 import com.application.vr.cardboard.models.interfaces.Model;
+import com.application.vr.cardboard.models.ui_models.TipsHead;
 import com.application.vr.cardboard.models.ui_models.UiCreator;
 import com.application.vr.cardboard.models.interfaces.DynamicModel;
 import com.application.vr.cardboard.models.interfaces.StaticModel;
-import com.application.vr.cardboard.models.ui_models.UiHead;
 import com.application.vr.cardboard.motion.AccelerometerListener;
 import com.application.vr.cardboard.motion.GyroscopeListener;
 import com.application.vr.cardboard.motion.MotionInterpolator;
@@ -35,11 +36,14 @@ import java.util.List;
 
 import javax.microedition.khronos.egl.EGLConfig;
 
+import static android.opengl.GLES20.GL_ONE_MINUS_SRC_ALPHA;
+import static android.opengl.GLES20.GL_SRC_ALPHA;
+
 public class SceneRenderer implements GvrView.StereoRenderer {
 
     private static final String TAG = "SceneRenderer";
     private static final float Z_NEAR = 1f;
-    private static final float Z_FAR = 1100.0f;
+    private static final float Z_FAR = 10000.0f;
     private int HEAD_MODE;
 
     private Context context;
@@ -52,7 +56,10 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     private List<StaticModel> staticModels;
     private UiCreator uiCreator;
 
+    private float xLightPosition = 20f, yLightPosition = 10f, zLightPosition = -50f;
+
     // moveVPMatrix is an abbreviation for "View Projection Matrix"
+    private float[] viewMatrix = new float[16];
     private float[] completeVPMatrix = new float[16];
     private float[] uiVPMatrix = new float[16];
     private float[] uiMapViewMatrix = new float[16];
@@ -80,6 +87,12 @@ public class SceneRenderer implements GvrView.StereoRenderer {
 
     @Override
     public void onNewFrame(HeadTransform headTransform) {
+        // Draw background color
+        GLES30.glClear(GLES30.GL_DEPTH_BUFFER_BIT | GLES30.GL_COLOR_BUFFER_BIT);
+        // Clear depth buffer
+        GLES30.glEnable(GLES30.GL_DEPTH_TEST);
+        GLES30.glEnable(GLES30.GL_BLEND);
+
         if (HEAD_MODE == HeadMode.FREE_HEAD) {
             // Update the current forward vector
             headTransform.getForwardVector(forwardVec, 0);
@@ -102,24 +115,20 @@ public class SceneRenderer implements GvrView.StereoRenderer {
 
     @Override
     public void onDrawEye(Eye eye) {
-        // Draw background color
-        GLES30.glClear(GLES30.GL_DEPTH_BUFFER_BIT | GLES30.GL_COLOR_BUFFER_BIT);
-        // Clear depth buffer
-        GLES30.glEnable(GLES30.GL_DEPTH_TEST);
-
         float[] perspective = eye.getPerspective(Z_NEAR, Z_FAR);
         if (HEAD_MODE == HeadMode.FREE_HEAD) {
             // Get an eye view matrix and interpolate it to reduce camera shaking
             float[] normalizedEyeView = MotionInterpolator.interpolateView(eye.getEyeView());
-            Matrix.multiplyMM(uiVPMatrix, 0, perspective, 0, camera.getStraightView(), 0);
             Matrix.multiplyMM(completeVPMatrix, 0, perspective, 0, normalizedEyeView, 0);
+            Matrix.multiplyMM(uiVPMatrix, 0, perspective, 0, camera.getStraightView(), 0);
+            viewMatrix = normalizedEyeView;
         } else {
             Matrix.multiplyMM(uiVPMatrix, 0, perspective, 0, camera.getYawView(), 0);
             Matrix.multiplyMM(completeVPMatrix, 0, perspective, 0, camera.getCompleteView(), 0);
+            viewMatrix = camera.getCompleteView();
         }
-
-        //Draw all models including UI elements.
-        for (Model m : allModels) m.draw(completeVPMatrix);
+        //Draw all models.
+        for (Model m : allModels) m.draw(completeVPMatrix, viewMatrix);
         // Draw the UI elements including the map with the dynamic models
         uiCreator.draw(uiVPMatrix, uiMapViewMatrix, dynamicModels, camera.getSpeedScaleVal(),
                 8, 6, 3, 10, 8);
@@ -136,8 +145,18 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     public void onSurfaceChanged(int width, int height) {
         float xScale = width/1000f;
         float yScale = height/1000f;
+
+        // Устанавливаем OpenGL окно просмотра того же размера что и поверхность экрана.
+        GLES30.glViewport(0, 0, width, height);
+
+        // Создаем новую матрицу проекции. Высота остается та же,
+        // а ширина будет изменяться в соответствии с соотношением сторон.
+        final float ratio = (float) width / height;
+
+        Log.e("XY", xScale+" "+yScale);
+        Log.e("ratio", ratio+" ");
         //Create an instance of the UiCreator to put screen parameters for scaling
-        uiCreator = new UiCreator(context, xScale, yScale);
+        uiCreator = new UiCreator(context, xScale, yScale, ratio);
     }
 
     public void setHeadMode(int HEAD_MODE) {
@@ -147,7 +166,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     public int putDownEvent(DownEvent e) {
         if (e.isReached()) {
             camera.speedDown();
-            uiCreator.removeUiHead(UiHead.Direction.DOWN);
+            uiCreator.removeUiHead(TipsHead.Direction.DOWN);
         }
         return camera.getSpeedScaleVal();
     }
@@ -155,7 +174,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     public int putTopEvent(TopEvent e) {
         if (e.isReached()) {
             camera.speedUp();
-            uiCreator.removeUiHead(UiHead.Direction.UP);
+            uiCreator.removeUiHead(TipsHead.Direction.UP);
         }
         return camera.getSpeedScaleVal();
     }
@@ -163,7 +182,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     public int putRightEvent(RightEvent e) {
 //        if (e.isReached()) {
 //            uiCreator.changeColorScheme();
-//            uiCreator.removeUiHead(UiHead.Direction.RIGHT);
+//            uiCreator.removeUiHead(TipsHead.Direction.RIGHT);
 //        }
         return 0;
     }
@@ -171,7 +190,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     public int putLeftEvent(LeftEvent e) {
 //        if (e.isReached()) {
 //            uiCreator.showMap();
-//            uiCreator.removeUiHead(UiHead.Direction.LEFT);
+//            uiCreator.removeUiHead(TipsHead.Direction.LEFT);
 //        }
         return 0;
     }

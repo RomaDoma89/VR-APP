@@ -15,8 +15,6 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 import de.javagl.obj.Obj;
 import de.javagl.obj.ObjData;
@@ -49,8 +47,8 @@ public class UiAim {
         this.yScale = yScale;
         prepareData(context);
         // Prepare shaders and OpenGL program.
-        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader_uv);
-        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader_uv);
+        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vs_simple_uv);
+        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fs_simple_uv);
         // Create empty OpenGL Program.
         mProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
         // get handle to vertex shader's vPosition member
@@ -63,8 +61,8 @@ public class UiAim {
 
     public void prepareModel() {
         Matrix.setIdentityM(mModelMatrix, 0);
-        Matrix.scaleM(mModelMatrix, 0, xScale-0.1f, yScale-0.1f, xScale);
-        Matrix.translateM(mModelMatrix, 0, 0f, 0f, -2f);
+        Matrix.scaleM(mModelMatrix, 0, xScale, yScale, xScale);
+        Matrix.translateM(mModelMatrix, 0, 0f, 0f, -3f);
 
     }
     /**
@@ -74,10 +72,11 @@ public class UiAim {
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
         prepareModel();
-        drawModel(textureLoader, vertices, textures, indices);
 
         Matrix.multiplyMM(mMVPMatrix, 0, uiVPMatrix,0, mModelMatrix,0);
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
+
+        drawModel(textureLoader, vertices, textures, indices);
     }
 
     private void prepareData(Context context) {

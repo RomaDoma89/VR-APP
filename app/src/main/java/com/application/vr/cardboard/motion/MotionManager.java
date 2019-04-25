@@ -44,7 +44,7 @@ public class MotionManager {
 
         // Normalization of the rotation angle
         float zAngle = 0f;
-        if (rollDegrees < -5 || rollDegrees > 5) zAngle = (rollDegrees)/60;
+        if (rollDegrees < -5 || rollDegrees > 5) zAngle = (rollDegrees)/50;
 
         return zAngle;
     }

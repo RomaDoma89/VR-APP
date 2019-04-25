@@ -12,5 +12,4 @@ void main() {
     // for the matrix multiplication product to be correct.
     v_UV = a_UV;
     gl_Position = uMVPMatrix * vPosition;
-//    gl_PointSize = 1.0;
 }

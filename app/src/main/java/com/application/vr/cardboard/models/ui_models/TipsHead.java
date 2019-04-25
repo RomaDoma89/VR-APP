@@ -27,7 +27,7 @@ import static android.opengl.GLES20.GL_TRIANGLES;
 import static android.opengl.GLES20.GL_UNSIGNED_SHORT;
 import static android.opengl.GLES20.glDrawElements;
 
-public class UiHead {
+public class TipsHead {
     private FloatBuffer vertices, textures;
     private ShortBuffer indices;
     private TextureLoader texFront, texUp, texDown, texLeft, texRight;
@@ -38,7 +38,6 @@ public class UiHead {
     private int mMVPMatrixHandle;
     private float[] mModelMatrix = new float[16];
     private float[] mMVPMatrix = new float[16];
-    private float[] mEmptyVPMatrix = new float[16];
     private float xScale;
     private float yScale;
     private int direction;
@@ -46,14 +45,14 @@ public class UiHead {
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
-    public UiHead(Context context, float xScale, float yScale, int direction) {
+    public TipsHead(Context context, float xScale, float yScale, int direction) {
         this.xScale = xScale;
         this.yScale = yScale;
         this.direction = direction;
         prepareData(context);
         // Prepare shaders and OpenGL program.
-        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader_uv);
-        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader_uv);
+        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vs_simple_uv);
+        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fs_simple_uv);
         // Create empty OpenGL Program.
         mProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
         // get handle to vertex shader's vPosition member
@@ -62,28 +61,28 @@ public class UiHead {
         mUVHandle = GLES30.glGetAttribLocation(mProgram, "a_UV");
         // get handle to shape's transformation matrix
         mMVPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix");
-
-        Matrix.setIdentityM(mEmptyVPMatrix, 0);
     }
     private int count = 0;
     private boolean isFront = true;
     public void prepareModel() {
         Matrix.setIdentityM(mModelMatrix, 0);
-        Matrix.scaleM(mModelMatrix, 0, xScale-0.1f, yScale-0.1f, 1f);
         Matrix.rotateM(mModelMatrix, 0, -90, 0f, 0f, 1f);
+        Matrix.scaleM(mModelMatrix, 0, xScale/4f, yScale/4f, 1f);
         switch (direction) {
             case Direction.UP :
-                Matrix.translateM(mModelMatrix, 0, -1.5f, 0f, -5f);
+                Matrix.translateM(mModelMatrix, 0, -xScale*6f , -1f, -2.15f);
                 break;
             case Direction.DOWN :
-                Matrix.translateM(mModelMatrix, 0, 1.5f, 0f, -5f);
+                Matrix.translateM(mModelMatrix, 0, -xScale*6f, 1f, -2.15f);
                 break;
 //            case Direction.LEFT :
-//                Matrix.translateM(mModelMatrix, 0, 0f, -2f, -5f);
+//                Matrix.translateM(mModelMatrix, 0, 0f, -1.2f, -5f);
 //                break;
 //            case Direction.RIGHT :
-//                Matrix.translateM(mModelMatrix, 0, 0f, 2f, -5f);
+//                Matrix.translateM(mModelMatrix, 0, 0f, 1.2f, -5f);
         }
+
+
 
         if (count <= 60) isFront = true;
         else if (count <= 90) {
@@ -95,13 +94,17 @@ public class UiHead {
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
-    public void draw(float[] uiVPMatrix) {
-        GLES30.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        // Enable blending
-        GLES30.glEnable(GLES30.GL_BLEND);
+    public void draw(float[] mViewPorjMatrix) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(mProgram);
+
         prepareModel();
+
+        Matrix.setIdentityM(this.mMVPMatrix, 0);
+        Matrix.multiplyMM(this.mMVPMatrix, 0, mViewPorjMatrix,0, mModelMatrix,0);
+        GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, this.mMVPMatrix, 0);
+
+        GLES30.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         switch (direction) {
             case Direction.UP :
@@ -120,14 +123,6 @@ public class UiHead {
 //                if (isFront) drawModel(texFront, vertices, textures, indices);
 //                if (!isFront) drawModel(texRight, vertices, textures, indices);
         }
-
-        Matrix.multiplyMM(mMVPMatrix, 0, uiVPMatrix,0, mModelMatrix,0);
-        GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
-
-        // Enable blending
-        GLES30.glDisable(GLES30.GL_BLEND);
-        // Turn Depth Testing Off
-        GLES30.glEnable(GLES30.GL_DEPTH_TEST);
     }
 
     private void prepareData(Context context) {

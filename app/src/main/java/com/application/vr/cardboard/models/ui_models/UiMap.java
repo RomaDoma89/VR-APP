@@ -8,6 +8,7 @@ import java.util.List;
 import android.content.Context;
 import android.opengl.GLES30;
 import android.opengl.Matrix;
+import android.util.Log;
 
 import com.application.vr.cardboard.R;
 import com.application.vr.cardboard.file_utils.ShaderUtils;
@@ -49,7 +50,7 @@ public class UiMap {
     private float xScale;
     private float yScale;
 
-    private float translateX = 0f, translateY = 0f, translateZ = -2f;
+    private float translateX = 0f, translateY = -0.5f, translateZ = -5f;
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
@@ -82,19 +83,11 @@ public class UiMap {
     }
 
     private void prepareModel() {
-        Matrix.setIdentityM(scaleMatrix, 0);
-        Matrix.scaleM(scaleMatrix, 0, xScale-0.1f, yScale, 0.7f);
-
-        Matrix.setIdentityM(translationMatrix, 0);
-        Matrix.translateM(translationMatrix, 0, translateX, translateY-(xScale+xScale/6), translateZ);
-
-        Matrix.setIdentityM(rotationMatrix, 0);
-        Matrix.rotateM(rotationMatrix, 0, 15, 1f, 0f, 0f);
-
         Matrix.setIdentityM(mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, scaleMatrix, 0, mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, rotationMatrix, 0, mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, mModelMatrix, 0);
+        Matrix.translateM(mModelMatrix, 0, 0f, -xScale/5.0f - xScale, -2.0f);
+        Matrix.scaleM(mModelMatrix, 0, 5f, 5f, 5f);
+        Matrix.scaleM(mModelMatrix, 0, 0.08f + xScale/10, 0.08f, 0.08f);
+        Matrix.rotateM(mModelMatrix, 0, 15, 1f, 0f, 0);
     }
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
@@ -112,13 +105,22 @@ public class UiMap {
         GLES30.glUseProgram(mProgramMap);
 
         prepareModel();
-        drawModel();
-
         //Multiply the MVP and the DynamicModel matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
         // Apply the projection and view transformation
         Matrix.multiplyMM(mMVPMatrix, 0, uiVPMatrix, 0, mModelMatrix, 0);
         GLES30.glUniformMatrix4fv(mMVPHandleMap, 1, false, mMVPMatrix, 0);
+
+        // Set width for lines
+        GLES30.glLineWidth(3f);
+        // Enable a handle to the triangle vertices
+        GLES30.glEnableVertexAttribArray(mPositionHandleMap);
+        // Prepare the model coordinate data
+        GLES30.glVertexAttribPointer(mPositionHandleMap, 3, GLES30.GL_FLOAT, false,12, vertexData);
+        GLES30.glUniform4fv(mColorHandleMap, 1, getUserColor(), 0);
+        GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 3);
+        // Disable vertex array
+        GLES30.glDisableVertexAttribArray(mPositionHandleMap);
     }
 
     private void drawInners(float[] uiVPMatrix, float [] headView, List<DynamicModel> dynamicModels) {
@@ -126,51 +128,29 @@ public class UiMap {
         GLES30.glUseProgram(mProgramObj);
 
         prepareModel();
-        if (showMap) drawDynamicModel(dynamicModels, headView);
-
         //Multiply the MVP and the DynamicModel matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
         // Apply the projection and view transformation
         Matrix.multiplyMM(mMVPMatrix, 0, uiVPMatrix, 0, mModelMatrix, 0);
         GLES30.glUniformMatrix4fv(mMVPHandleObj, 1, false, mMVPMatrix, 0);
+
+        if (showMap) drawDynamicModel(dynamicModels, headView);
     }
 
     private void prepareData() {
         int index = 0;
-        // map area (circle)
-        for(int i=0; i<MAP_CIRCLE; i++){
-            vertices[(index * 3)] = (float) (0.5 * Math.cos((3.14/180) * (float)(i*30)));
-            vertices[(index * 3)+1] = 0f;
-            vertices[(index * 3)+2] = (float) (0.5 * Math.sin((3.14/180) * (float)(i*30)));
-            index++;
-        }
-        index*=3;
-        //left top line
-        vertices[index+ 0] = -2;
-        vertices[index+ 1] = 0f;
-        vertices[index+ 2] = -0.65f;
-        vertices[index+ 3] = -2/5f;
-        vertices[index+ 4] = 0f;
-        vertices[index+ 5] = -0.65f;
-        //right top line
-        vertices[index+ 6] = 2/5f;
-        vertices[index+ 7] = 0f;
-        vertices[index+ 8] = -0.65f;
-        vertices[index+ 9] = 2;
-        vertices[index+ 10] = 0f;
-        vertices[index+ 11] = -0.65f;
         //red triangle in the map
-        vertices[index+ 12] = 0f;
-        vertices[index+ 13] = 0f;
-        vertices[index+ 14] = -0.06f;
+        vertices[index++] = 0f;
+        vertices[index++] = 0f;
+        vertices[index++] = -0.06f;
 
-        vertices[index+ 15] = -0.04f;
-        vertices[index+ 16] = 0f;
-        vertices[index+ 17] = 0.04f;
+        vertices[index++] = -0.04f;
+        vertices[index++] = 0f;
+        vertices[index++] = 0.04f;
 
-        vertices[index+ 18] = 0.04f;
-        vertices[index+ 19] = 0f;
-        vertices[index+ 20] = 0.04f;
+        vertices[index++] = 0.04f;
+        vertices[index++] = 0f;
+        vertices[index++] = 0.04f;
 
         vertexData = ByteBuffer
                 .allocateDirect(vertices.length * 4)
@@ -178,26 +158,6 @@ public class UiMap {
                 .asFloatBuffer();
         vertexData.put(vertices);
         vertexData.position(0);
-    }
-
-    private void drawModel() {
-        // Set width for lines
-        GLES30.glLineWidth(2f);
-        // Enable a handle to the triangle vertices
-        GLES30.glEnableVertexAttribArray(mPositionHandleMap);
-        // Prepare the model coordinate data
-        GLES30.glVertexAttribPointer(mPositionHandleMap, 3, GLES30.GL_FLOAT, false,12, vertexData);
-        // Set color for drawing
-        GLES30.glUniform4fv(mColorHandleMap, 1, getMainColor(), 0);
-        // Draw the circle
-        GLES30.glDrawArrays(GLES30.GL_LINE_LOOP, 0, MAP_CIRCLE);
-        // Draw the lines
-        GLES30.glDrawArrays(GLES30.GL_LINES, MAP_CIRCLE, 4);
-        // Set color for drawing
-        GLES30.glUniform4fv(mColorHandleMap, 1, getUserColor(), 0);
-        GLES30.glDrawArrays(GLES30.GL_TRIANGLES, MAP_USER, 3);
-        // Disable vertex array
-        GLES30.glDisableVertexAttribArray(mPositionHandleMap);
     }
 
     private void drawDynamicModel(List<DynamicModel> dynamicModels, float [] headView) {

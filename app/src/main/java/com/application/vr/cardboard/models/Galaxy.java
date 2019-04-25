@@ -3,7 +3,6 @@ package com.application.vr.cardboard.models;
 import android.content.Context;
 import android.opengl.GLES30;
 import android.opengl.Matrix;
-import android.util.Log;
 
 import com.application.vr.cardboard.R;
 import com.application.vr.cardboard.file_utils.ShaderUtils;
@@ -17,7 +16,6 @@ import java.util.Random;
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_POINTS;
 import static android.opengl.GLES20.glDrawArrays;
-import static android.opengl.GLES20.glLineWidth;
 
 
 /**
@@ -29,10 +27,10 @@ public class Galaxy implements StaticModel, Runnable {
     private FloatBuffer vertexData;
     private Thread loadingDataThread;
 
-    private final int mProgram;
-    private final int mColorHandle;
-    private final int mPositionHandle;
-    private final int mMVPMatrixHandle;
+    private final int glProgram;
+    private final int glColorParam;
+    private final int glPositionParam;
+    private final int glMVPMatrixParam;
 
     private final float[] mModelMatrix = new float[16];
     private final float[] mMVPMatrix = new float[16];
@@ -62,25 +60,21 @@ public class Galaxy implements StaticModel, Runnable {
         loadingDataThread.start();
 
         // Prepare shaders and OpenGL program.
-        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vertex_shader);
-        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fragment_shader);
+        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vs_non_texture);
+        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fs_non_texture);
 
         // Create empty OpenGL Program.
-        mProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
+        glProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
         // get handle to vertex shader's vPosition member
-        mPositionHandle = GLES30.glGetAttribLocation(mProgram, "vPosition");
+        glPositionParam = GLES30.glGetAttribLocation(glProgram, "vPosition");
         // get handle to fragment shader's vColor member
-        mColorHandle = GLES30.glGetUniformLocation(mProgram, "vColor");
+        glColorParam = GLES30.glGetUniformLocation(glProgram, "vColor");
         // get handle to shape's transformation matrix
-        mMVPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix");
+        glMVPMatrixParam = GLES30.glGetUniformLocation(glProgram, "uMVPMatrix");
 
         Matrix.setIdentityM(mMVPMatrix, 0);
     }
-
-    /**
-     * Encapsulates the OpenGL ES instructions for drawing this shape.
-     */
-    public void draw(float[] mVPMatrix) {
+    public void prepareModel() {
         Matrix.setIdentityM(mModelMatrix, 0);
         // We can transform, rotate or scale the mModelMatrix here.
         Matrix.translateM(mModelMatrix, 0, translateX, translateY, translateZ);
@@ -88,18 +82,23 @@ public class Galaxy implements StaticModel, Runnable {
         if (0 != rotationY) Matrix.rotateM(mModelMatrix, 0, 25, 0f, rotationY, 0f);
         if (0 != rotationZ) Matrix.rotateM(mModelMatrix, 0, 25, 0f, 0f, rotationZ);
         Matrix.scaleM(mModelMatrix, 0,  scale, scale, scale);
+    }
+    /**
+     * Encapsulates the OpenGL ES instructions for drawing this shape.
+     */
+    public void draw(float[] mVPMatrix, float[] mViewMatrix) {
+        // Add program to OpenGL environment
+        GLES30.glUseProgram(glProgram);
 
         // Multiply the MVP and the DynamicModel matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
+        Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix, 0, mModelMatrix, 0);
+        GLES30.glUniformMatrix4fv(glMVPMatrixParam, 1, false, mMVPMatrix, 0);
 
-        // Add program to OpenGL environment
-        GLES30.glUseProgram(mProgram);
-
+        //Transform model matrix
+        prepareModel();
         //Drawing of the model
         drawModel();
-
-        Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix, 0, mModelMatrix, 0);
-        GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
     }
 
     private int size = 0;
@@ -170,14 +169,14 @@ public class Galaxy implements StaticModel, Runnable {
     private void drawModel() {
         if (null != vertexData) {
             // Enable vertex array
-            GLES30.glEnableVertexAttribArray(mPositionHandle);
-            GLES30.glVertexAttribPointer(mPositionHandle, 3, GL_FLOAT, false, 0, vertexData);
+            GLES30.glEnableVertexAttribArray(glPositionParam);
+            GLES30.glVertexAttribPointer(glPositionParam, 3, GL_FLOAT, false, 0, vertexData);
 
             // Set color for drawing
-            GLES30.glUniform4fv(mColorHandle, 1, color, 0);
+            GLES30.glUniform4fv(glColorParam, 1, color, 0);
             glDrawArrays(GL_POINTS, 0, (int) Math.pow(stars_amount, 3));
             // Disable vertex array
-            GLES30.glDisableVertexAttribArray(mPositionHandle);
+            GLES30.glDisableVertexAttribArray(glPositionParam);
         }
     }
 

@@ -1,40 +1,32 @@
-precision lowp float;
+precision mediump  float;
 uniform sampler2D u_Texture;
-
-uniform vec3 uLightPos;        // The position of the light in eye space.
-uniform vec4 uLightCol;        // The color of the light in eye space.
 
 varying vec2 v_UV;
 varying vec3 v_Normal;
 varying vec3 v_Position_Local;
-varying vec3 v_Position_Global;
+varying vec3 v_Light_Pos;        // The position of the light in eye space.
+varying vec3 v_Light_Col;        // The color of the light in eye space.
 
 void main() {
+    // ambient lighting
+    float amientStrength = 0.3;
+    vec3 ambientColor = vec3(1.0, 1.0, 1.0);
+    vec3 ambient = amientStrength * ambientColor;
 
-    // Will be used for attenuation.
-//    float distance = length(uLightPos - v_Position_Global);
+    // diffuse lighting
+    vec3 norm = normalize(v_Normal);
+    vec3 lightDirectiton = normalize(v_Light_Pos - v_Position_Local);
+    float diff = max(dot(norm, lightDirectiton), 0.0);
+    float diffuseStrength = 0.2;
+    vec3 diffuse = diff * (diffuseStrength + v_Light_Col);
 
-    // Doing lighting calculations in the fragment give us an interpolated normal--smoother shading
-    // Get a lighting direction vector from the light to the vertex.
-    vec3 lightVectorGlobal = normalize(uLightPos - v_Position_Global);
-    vec3 lightVectorLocal = normalize(uLightPos - v_Position_Local);
+    // result lighting
+    vec3 result = ambient + diffuse;
 
-    // Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
-    // pointing in the same direction then it will get max illumination.
-    float diffuseGlobal = max(dot(v_Normal, lightVectorGlobal), 0.0);
-    float diffuseLocal = max(dot(v_Normal, lightVectorLocal), 0.1);
+    // texures
+    vec4 texture = texture2D(u_Texture, vec2(v_UV.x, 1.0 - v_UV.y));
 
-    // Add attenuation.
-
-
-    // Add ambient lighting
-    diffuseGlobal = diffuseGlobal * 0.15;;  //very little ambient lighting.... this is space
-    diffuseLocal = diffuseLocal * 0.15;;  //very little ambient lighting.... this is space
-
-    vec4 texture = texture2D(u_Texture, vec2(v_UV.x, 1.0 - v_UV.y)) ;
-
-    gl_FragColor =  texture * (diffuseLocal + diffuseGlobal);
-//    gl_FragColor =  texture * (diffuseLocal);
-
+    // final preparing
+    gl_FragColor =  texture * vec4(result, 1.0);
     gl_FragColor.a = 1.0;
 }

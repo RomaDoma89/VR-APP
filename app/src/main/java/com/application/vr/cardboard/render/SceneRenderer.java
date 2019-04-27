@@ -135,7 +135,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         for (Model m : allModels) m.draw(completeVPMatrix, viewMatrix, globalLightPosition, globalLightColor);
         // Draw the UI elements including the map with the dynamic models
         uiCreator.draw(uiVPMatrix, uiMapViewMatrix, dynamicModels, camera.getSpeedScaleVal(),
-                8, 6, 3, 10, 8);
+                8, 6, 3, 10, 8, globalLightPosition, globalLightColor);
     }
 
     @Override

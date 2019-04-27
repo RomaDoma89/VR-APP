@@ -4,7 +4,6 @@ uniform sampler2D u_Texture;
 varying vec2 v_UV;
 varying vec3 v_Normal;
 varying vec3 v_Position_Local;
-//varying vec3 v_Position_Global;
 varying vec3 v_Light_Pos;        // The position of the light in eye space.
 varying vec3 v_Light_Col;        // The color of the light in eye space.
 

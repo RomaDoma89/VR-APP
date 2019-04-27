@@ -42,8 +42,10 @@ public class UiCreator {
                      int leftThirdAmount,
                      int rightFistAmount,
                      int rightSecondAmount,
-                     int rightThirdAmount) {
-        uiShip.draw(uiVPMatrix, headView);
+                     int rightThirdAmount,
+                     float[] globalLightPosition,
+                     float[] globalLightColor) {
+        uiShip.draw(uiVPMatrix, headView, globalLightPosition, globalLightColor);
         uiAim.draw(uiVPMatrix);
         for (TipsHead uh : tipsHeadList) uh.draw(uiVPMatrix);
         uiMap.draw(uiVPMatrix, headView, dynamicModels);

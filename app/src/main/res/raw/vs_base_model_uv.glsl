@@ -8,11 +8,8 @@ uniform vec3 a_Light_Col;
 attribute vec4 a_Position;
 attribute vec3 a_Normal;
 attribute vec2 a_UV;
-//attribute vec3 a_Light_Pos;        // The position of the light in eye space.
-//attribute vec3 a_Light_Col;        // The color of the light in eye space.
 
 varying vec3 v_Position_Local;
-//varying vec3 v_Position_Global;
 varying vec2 v_UV;
 varying vec3 v_Normal;
 
@@ -33,5 +30,4 @@ void main() {
     v_Light_Pos = a_Light_Pos;
     v_Light_Col = a_Light_Col;
     v_Position_Local = vec3(u_MVMatrix * a_Position);
-//    v_Position_Global = vec3(a_Position);
 }

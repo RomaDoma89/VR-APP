@@ -86,7 +86,7 @@ public class Galaxy implements StaticModel, Runnable {
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
-    public void draw(float[] mVPMatrix, float[] mViewMatrix) {
+    public void draw(float[] mVPMatrix, float[] mViewMatrix, float[] globalLightPosition, float[] globalLightColor) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(glProgram);
 

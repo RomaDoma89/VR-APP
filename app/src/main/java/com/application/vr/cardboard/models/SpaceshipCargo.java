@@ -45,17 +45,25 @@ public class SpaceshipCargo implements DynamicModel {
     private TextureLoader corpus_tl;
     private TextureLoader window_tl;
 
-    private final int mMainProgram;
-    private int mMainPositionHandle;
-    private int mMainMVPMatrixHandle;
-    private int mUVHandle;
+    private final int glProgram;
+    private int glPositionParam;
+    private int glNormalParam;
+    private int glLightPosParam;
+    private int glLightColParam;
+    private int glMVPMatrixParam;
+    private int glModelMatrixParam;
+    private int glTextureParam;
+
     private final float[] mModelMatrix = new float[16];
     private final float[] mMVPMatrix = new float[16];
     private final float[] translationMatrix = new float[16];
     private final float[] rotationMatrix = new float[16];
     private final float[] map_color = new float[]{ 0.494f, 0.419f, 0.188f, 1.0f };
 
-    private float translateX, translateY, translateZ;
+    private final float[] lightPosition = new float[3];
+    private final float[] lightColor = new float[3];
+
+    private float translationX, translationY, translationZ;
     private float rotationX, rotationY, rotationZ;
     private float scale;
     private float rotation = 0f;
@@ -65,41 +73,51 @@ public class SpaceshipCargo implements DynamicModel {
      */
     public SpaceshipCargo(Context context, float translateX, float translateY, float translateZ,
                          float rotationX, float rotationY, float rotationZ, float scale) {
-        this.translateX = translateX;
-        this.translateY = translateY;
-        this.translateZ = translateZ;
+        this.translationX = translateX;
+        this.translationY = translateY;
+        this.translationZ = translateZ;
         this.rotationX = rotationX;
         this.rotationY = rotationY;
         this.rotationZ = rotationZ;
         this.scale = scale;
 
         // Prepare shaders and OpenGL program.
-        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vs_simple_uv);
-        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fs_simple_uv);
+        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vs_base_model_uv);
+        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fs_base_model_uv);
         // Create empty OpenGL Program.
-        mMainProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
+        glProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
         // get handle to vertex shader's vPosition member
-        mMainPositionHandle = GLES30.glGetAttribLocation(mMainProgram, "vPosition");
-        // get handle to fragment shader's vColor member
-        mUVHandle = GLES30.glGetAttribLocation(mMainProgram, "a_UV");
+        glPositionParam = GLES30.glGetAttribLocation(glProgram, "a_Position");
+        glNormalParam = GLES30.glGetAttribLocation(glProgram, "a_Normal");
+        // get handle to fragment shader's texture member
+        glTextureParam = GLES30.glGetAttribLocation(glProgram, "a_UV");
+
         // get handle to shape's transformation matrix
-        mMainMVPMatrixHandle = GLES30.glGetUniformLocation(mMainProgram, "uMVPMatrix");
-        float[] mEmptyVPMatrix = new float[16];
-        Matrix.setIdentityM(mEmptyVPMatrix, 0);
+        glMVPMatrixParam = GLES30.glGetUniformLocation(glProgram, "u_MVPMatrix");
+        glModelMatrixParam = GLES30.glGetUniformLocation(glProgram, "u_MVMatrix");
+        glLightPosParam = GLES30.glGetUniformLocation(glProgram, "a_Light_Pos");
+        glLightColParam = GLES30.glGetUniformLocation(glProgram, "a_Light_Col");
+
         // Load and parse Blander object.
         this.prepareData(context);
     }
-    private void prepareModel() {
-        Matrix.setIdentityM(translationMatrix, 0);
-        Matrix.translateM(translationMatrix, 0, translateX, translateY, translateZ);
-        Matrix.setIdentityM(rotationMatrix, 0);
+    private void prepareModel(float[] globalLightPosition, float[] globalLightColor) {
         Matrix.setIdentityM(mModelMatrix, 0);
-        Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
+        Matrix.translateM(mModelMatrix, 0, translationX, translationY, translationZ);
+        Matrix.scaleM(mModelMatrix, 0, scale, scale, scale);
+
+        lightPosition[0] = globalLightPosition[0] - translationX;
+        lightPosition[1] = globalLightPosition[1] - translationY;
+        lightPosition[2] = globalLightPosition[2] - translationZ;
+
+        lightColor[0] = globalLightColor[0];
+        lightColor[1] = globalLightColor[1];
+        lightColor[2] = globalLightColor[2];
     }
 
     @Override
     public float[] getPosition() {
-        return new float[] {translateX/800, translateY/800, translateZ/800};
+        return new float[] {translationX/800, translationY/800, translationZ/800};
     }
 
     @Override
@@ -109,50 +127,57 @@ public class SpaceshipCargo implements DynamicModel {
     @Override
     public void moveByCamera(@Nullable float[] forwardVec, float speed) {
         if (null != forwardVec) {
-            translateX -= forwardVec[0] * speed;
-            translateY -= forwardVec[1] * speed;
-            translateZ -= forwardVec[2] * speed;
+            translationX -= forwardVec[0] * speed;
+            translationY -= forwardVec[1] * speed;
+            translationZ -= forwardVec[2] * speed;
         }
     }
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
     @Override
-    public void draw(float[] mVPMatrix, float[] mViewMatrix) {
+    public void draw(float[] mVPMatrix, float[] mViewMatrix, float[] globalLightPosition, float[] globalLightColor) {
         // Add program to OpenGL environment
-        GLES30.glUseProgram(mMainProgram);
+        GLES30.glUseProgram(glProgram);
 
-        // Multiply the MVP and the DynamicModel matrices.
+        // Translation, scaling and rotation of the model.
+        prepareModel(globalLightPosition, globalLightColor);
+
+        // Multiply the MVP and the model matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
-        Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix, 0, mModelMatrix, 0);
-        GLES30.glUniformMatrix4fv(mMainMVPMatrixHandle, 1, false, mMVPMatrix, 0);
-
-        //Transform model first.
-        prepareModel();
+        Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix,0, mModelMatrix,0);
+        // Past a ModelViewProjection matrix to the shader parameter
+        GLES30.glUniformMatrix4fv(glMVPMatrixParam, 1, false, mMVPMatrix, 0);
+        // Past a ModelView matrix to the shader parameter
+        GLES30.glUniformMatrix4fv(glModelMatrixParam, 1, false, mModelMatrix, 0);
+        GLES30.glUniform3fv(glLightPosParam, 1, lightPosition, 0);
+        GLES30.glUniform3fv(glLightColParam, 1, lightColor, 0);
 
         // Enable vertex array
-        GLES30.glEnableVertexAttribArray(mMainPositionHandle);
-        GLES30.glEnableVertexAttribArray(mUVHandle);
-
+        GLES30.glEnableVertexAttribArray(glPositionParam);
+        GLES30.glEnableVertexAttribArray(glNormalParam);
+        GLES30.glEnableVertexAttribArray(glTextureParam);
 
         // Draw the vertices and the textures for each material of the object
         corpus_tl.bind();
-        drawVertices(corpus_vrtx, corpus_texr, corpus_indx);
+        drawVertices(corpus_vrtx, corpus_norm, corpus_texr, corpus_indx);
         corpus_tl.unbind();
 
         window_tl.bind();
-        drawVertices(window_vrtx, window_texr, window_indx);
+        drawVertices(window_vrtx, window_norm, window_texr, window_indx);
         window_tl.unbind();
 
         // Disable vertex array
-        GLES30.glDisableVertexAttribArray(mMainPositionHandle);
-        GLES30.glDisableVertexAttribArray(mUVHandle);
+        GLES30.glDisableVertexAttribArray(glPositionParam);
+        GLES30.glDisableVertexAttribArray(glNormalParam);
+        GLES30.glDisableVertexAttribArray(glTextureParam);
     }
 
-    private void drawVertices(FloatBuffer vertexBuff, FloatBuffer textureBuffer, ShortBuffer indices) {
-        GLES30.glVertexAttribPointer(mMainPositionHandle, 3, GLES30.GL_FLOAT, false, 0, vertexBuff);
-        GLES30.glVertexAttribPointer(mUVHandle, 2, GLES30.GL_FLOAT, false, 0, textureBuffer);
-        glDrawElements(GL_TRIANGLES, indices.limit(), GL_UNSIGNED_SHORT, indices);
+    private void drawVertices(FloatBuffer vertexBuff, FloatBuffer normalsBuff, FloatBuffer textureBuffer, ShortBuffer indices) {
+        GLES30.glVertexAttribPointer(glPositionParam, 3, GLES30.GL_FLOAT, false, 0, vertexBuff);
+        GLES30.glVertexAttribPointer(glNormalParam, 3, GLES30.GL_FLOAT, false, 0, normalsBuff);
+        GLES30.glVertexAttribPointer(glTextureParam, 2, GLES30.GL_FLOAT, false, 0, textureBuffer);
+        GLES30.glDrawElements(GL_TRIANGLES, indices.limit(), GL_UNSIGNED_SHORT, indices);
     }
 
     private Mtl findMtlForName(Iterable<? extends Mtl> mtls, String name) {
@@ -166,11 +191,11 @@ public class SpaceshipCargo implements DynamicModel {
         List<Mtl> mtlList = null;
         Map<String, Obj> materials = null;
         try {
-            InputStream objInputStream = context.getAssets().open("objects/space_ship.obj");
+            InputStream objInputStream = context.getAssets().open("objects/cargo.obj");
             Obj obj = ObjUtils.convertToRenderable(ObjReader.read(objInputStream));
             objInputStream.close();
             if (null != obj) materials = ObjSplitting.splitByMaterialGroups(obj);
-            InputStream mtlInputStream = context.getAssets().open("objects/space_ship.mtl");
+            InputStream mtlInputStream = context.getAssets().open("objects/cargo.mtl");
             mtlList = MtlReader.read(mtlInputStream);
 
             corpus_tl = new TextureLoader(context, "textures/spaceship_corpus_txr.jpg");
@@ -185,7 +210,7 @@ public class SpaceshipCargo implements DynamicModel {
                 Obj material = entry.getValue();
                 Mtl mtl = findMtlForName(mtlList, materialName);
 
-                if (materialName.contains("corpus") || materialName.contains("engine_body")) {
+                if (materialName.contains("corpus")) {
                     // Extract the relevant material properties. These properties can
                     // be used to set up the renderer. For example, they may be passed
                     // as uniform variables to a shader
@@ -196,16 +221,16 @@ public class SpaceshipCargo implements DynamicModel {
                     // the vertex buffer objects and vertex array objects for OpenGL
                     corpus_vrtx = (ObjData.getVertices(material));
                     corpus_texr = (ObjData.getTexCoords(material, 2));
-                    corpus_norm = (ObjData.getVertices(material));
+                    corpus_norm = (ObjData.getNormals(material));
                     IntBuffer intIndices = ObjData.getFaceVertexIndices(material);
                     ShortBuffer indices = ByteBuffer.allocateDirect(intIndices.limit() * 2).order(ByteOrder.nativeOrder()).asShortBuffer();
                     while (intIndices.hasRemaining()) indices.put((short) intIndices.get());
                     indices.rewind();
                     corpus_indx = (indices);
-                } else if (materialName.contains("engine_light") || materialName.contains("windows")) {
+                } else if (materialName.contains("window")) {
                     window_vrtx = (ObjData.getVertices(material));
                     window_texr = (ObjData.getTexCoords(material, 2));
-                    window_norm = (ObjData.getVertices(material));
+                    window_norm = (ObjData.getNormals(material));
                     IntBuffer intIndices = ObjData.getFaceVertexIndices(material);
                     ShortBuffer indices = ByteBuffer.allocateDirect(intIndices.limit() * 2).order(ByteOrder.nativeOrder()).asShortBuffer();
                     while (intIndices.hasRemaining()) indices.put((short) intIndices.get());

@@ -55,6 +55,8 @@ public class SceneRenderer implements GvrView.StereoRenderer {
     private List<DynamicModel> dynamicModels;
     private List<StaticModel> staticModels;
     private UiCreator uiCreator;
+    private final float[] globalLightColor = new float[] { 0.5f, 0.5f, 0.5f };
+    private final float[] globalLightPosition = new float[] {60, 1095, -5000};
 
     private float xLightPosition = 20f, yLightPosition = 10f, zLightPosition = -50f;
 
@@ -91,7 +93,7 @@ public class SceneRenderer implements GvrView.StereoRenderer {
         GLES30.glClear(GLES30.GL_DEPTH_BUFFER_BIT | GLES30.GL_COLOR_BUFFER_BIT);
         // Clear depth buffer
         GLES30.glEnable(GLES30.GL_DEPTH_TEST);
-        GLES30.glEnable(GLES30.GL_BLEND);
+//        GLES30.glEnable(GLES30.GL_)
 
         if (HEAD_MODE == HeadMode.FREE_HEAD) {
             // Update the current forward vector
@@ -127,8 +129,10 @@ public class SceneRenderer implements GvrView.StereoRenderer {
             Matrix.multiplyMM(completeVPMatrix, 0, perspective, 0, camera.getCompleteView(), 0);
             viewMatrix = camera.getCompleteView();
         }
+
+//        Matrix.multiplyMV(lightPosInEyeSpace, 0, viewMatrix, 0, , 0);
         //Draw all models.
-        for (Model m : allModels) m.draw(completeVPMatrix, viewMatrix);
+        for (Model m : allModels) m.draw(completeVPMatrix, viewMatrix, globalLightPosition, globalLightColor);
         // Draw the UI elements including the map with the dynamic models
         uiCreator.draw(uiVPMatrix, uiMapViewMatrix, dynamicModels, camera.getSpeedScaleVal(),
                 8, 6, 3, 10, 8);

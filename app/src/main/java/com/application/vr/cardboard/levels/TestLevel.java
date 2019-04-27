@@ -25,25 +25,26 @@ public class TestLevel {
 
 
     public static List<Model> generateAll(Context context, List<DynamicModel> dynamicModels, List<StaticModel> staticModels) {
+        staticModels.add(sunFactory.create(context, 60, 95, -500, 0f, 1f, 0f, 10f));
+
         dynamicModels.add(asteroidFactory.create(context, 70, -55, -60, 0f, 0.5f, 0.5f, 1f));
         dynamicModels.add(asteroidFactory.create(context, -25, -70, -66, 0.5f, 0f, 0.5f, 2f));
         dynamicModels.add(asteroidFactory.create(context, -40, 35, 30, 0.5f, 0.5f, 0f, 3f));
         dynamicModels.add(asteroidFactory.create(context, 40, 68, 90, 0.5f, 0.5f, 0f, 2f));
 
-//        dynamicModels.add(cargoFactory.create(context, 16f, 55f, -100f, 0f, 0f, 0f, 0f));
-//        dynamicModels.add(cargoFactory.create(context, 0f, 55f, -95f, 0f, 0f, 0f, 0f));
-//        dynamicModels.add(cargoFactory.create(context, -19f, 55f, -110f, 0f, 0f, 0f, 0f));
+        dynamicModels.add(cargoFactory.create(context, 256f, -355f, -400f, 0f, 0f, 0f, 1f));
+        dynamicModels.add(cargoFactory.create(context, -100f, -355f, -195f, 0f, 0f, 0f, 1f));
+        dynamicModels.add(cargoFactory.create(context, -339f, -250f, -110f, 0f, 0f, 0f, 1f));
 
-        dynamicModels.add(hunterFactory.create(context, -40f, 5f, -60f,  0f, 0f, 0f, 1f));
-        dynamicModels.add(hunterFactory.create(context, -20f, 0f, -60f,  0f, 0f, 0f, 1f));
-        dynamicModels.add(hunterFactory.create(context, 20f, 0f, -60f,  0f, 0f, 0f, 1f));
-        dynamicModels.add(hunterFactory.create(context, 40f, 0f, -60f,  0f, 0f, 0f, 1f));
+        dynamicModels.add(hunterFactory.create(context, -40f, 5f, -160f,  0f, 0f, 0f, 1f));
+        dynamicModels.add(hunterFactory.create(context, -20f, 0f, -160f,  0f, 0f, 0f, 1f));
+        dynamicModels.add(hunterFactory.create(context, 20f, 0f, -160f,  0f, 0f, 0f, 1f));
+        dynamicModels.add(hunterFactory.create(context, 40f, 0f, -160f,  0f, 0f, 0f, 1f));
 
-        staticModels.add(sunFactory.create(context, 70, 15, -50, 0f, 1f, 0f, 3f));
-        staticModels.add(planetFactory.create(context, 200, 150, -300, 0f, 1f, 0f, 70f));
+        staticModels.add(planetFactory.create(context, 200, 150, -200, 0f, 1f, 0f, 70f));
 
-        staticModels.add(new Galaxy(context, Galaxy.Density.TEN, Galaxy.Color.YELLOW, -10f, -55f, 0f, 1f, 1f, 0f, 0.05f));
-        staticModels.add(new Galaxy(context, Galaxy.Density.TEN, Galaxy.Color.BLUE, 50f, 55f, 95f, 1f, 0f, 1f, 0.1f));
+        staticModels.add(new Galaxy(context, Galaxy.Density.TEN, Galaxy.Color.YELLOW, -10f, -555f, 0f, 1f, 1f, 0f, 0.5f));
+        staticModels.add(new Galaxy(context, Galaxy.Density.TEN, Galaxy.Color.BLUE, 150f, 555f, 95f, 1f, 0f, 1f, 1f));
 //        staticModels.add(new Galaxy(context, Galaxy.Density.THIRTY, Galaxy.Color.WHITE, 0, 0f, -1000f, 0f, 0f, 1f, 800f));
         staticModels.add(new Stars(context, 0, 300f));
 

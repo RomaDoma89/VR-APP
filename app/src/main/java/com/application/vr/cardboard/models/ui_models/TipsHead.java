@@ -67,13 +67,13 @@ public class TipsHead {
     public void prepareModel() {
         Matrix.setIdentityM(mModelMatrix, 0);
         Matrix.rotateM(mModelMatrix, 0, -90, 0f, 0f, 1f);
-        Matrix.scaleM(mModelMatrix, 0, xScale/4f, yScale/4f, 1f);
+        Matrix.scaleM(mModelMatrix, 0, xScale/2f, yScale/2f, 1f);
         switch (direction) {
             case Direction.UP :
-                Matrix.translateM(mModelMatrix, 0, -xScale*6f , -1f, -2.15f);
+                Matrix.translateM(mModelMatrix, 0, -1.2f, 0f, -5f);
                 break;
             case Direction.DOWN :
-                Matrix.translateM(mModelMatrix, 0, -xScale*6f, 1f, -2.15f);
+                Matrix.translateM(mModelMatrix, 0, 1.2f, 0f, -5f);
                 break;
 //            case Direction.LEFT :
 //                Matrix.translateM(mModelMatrix, 0, 0f, -1.2f, -5f);
@@ -105,6 +105,7 @@ public class TipsHead {
         GLES30.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, this.mMVPMatrix, 0);
 
         GLES30.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        GLES30.glEnable(GLES30.GL_BLEND);
 
         switch (direction) {
             case Direction.UP :

@@ -219,9 +219,9 @@ public class UiShip {
 //        // Past a ModelView matrix to the shader parameter
 //        GLES30.glUniformMatrix4fv(modelViewAlphaParam, 1, false, mModelMatrix, 0);
 //        // Past a local light position matrix to the shader parameter
-//        GLES30.glUniform3fv(lightPosAlphaParam, 1, lightPosition, 0);
+//        GLES30.glUniform3fv(lightPosAlphaParam, 1, globalLightPosition, 0);
 //        // Past a local light color matrix to the shader parameter
-//        GLES30.glUniform4fv(lightColAlphaParam, 1, lightColor, 0);
+//        GLES30.glUniform4fv(lightColAlphaParam, 1, globalLightColor, 0);
 //
 //        // Enable texture parameter
 //        GLES30.glEnableVertexAttribArray(positionAlphaParam);

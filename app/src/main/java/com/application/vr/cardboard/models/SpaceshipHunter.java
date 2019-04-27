@@ -51,7 +51,7 @@ public class SpaceshipHunter implements DynamicModel {
     private int glLightPosParam;
     private int glLightColParam;
     private int glMVPMatrixParam;
-    private int glMVMatrixParam;
+    private int glModelMatrixParam;
     private int glTextureParam;
 
     private final float[] mModelMatrix = new float[16];
@@ -61,46 +61,43 @@ public class SpaceshipHunter implements DynamicModel {
     private final float[] scaleMatrix = new float[16];
     private final float[] map_color = new float[]{  0.494f, 0.211f, 0.188f, 1.0f  };
 
-    private float[] lightPosition;
-    private float[] lightColor;
+    private final float[] lightPosition = new float[3];
+    private final float[] lightColor = new float[3];
 
-    private float translateX, translateY, translateZ;
+    private float translationX, translationY, translationZ;
     private float rotationX, rotationY, rotationZ;
     private float scale;
-    private float rotation = 0f;
+    private float rotation = 0.0f;
 
     /**
      * Sets up the drawing object data for use in an OpenGL ES context.
      */
     public SpaceshipHunter(Context context, float translateX, float translateY, float translateZ,
                            float rotationX, float rotationY, float rotationZ, float scale) {
-        this.translateX = translateX;
-        this.translateY = translateY;
-        this.translateZ = translateZ;
+        this.translationX = translateX;
+        this.translationY = translateY;
+        this.translationZ = translateZ;
         this.rotationX = rotationX;
         this.rotationY = rotationY;
         this.rotationZ = rotationZ;
         this.scale = scale;
 
-        lightColor = new float[] { 0, 0, 0, 0 };
-        lightPosition = new float[] { 0.0f, 0.0f, 250.0f };
-
         // Prepare shaders and OpenGL program.
-        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vs_hunter_model_uv);
-        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fs_hunter_model_uv);
+        int vertexShaderId = ShaderUtils.createShader(context, GLES30.GL_VERTEX_SHADER, R.raw.vs_base_model_uv);
+        int fragmentShaderId = ShaderUtils.createShader(context, GLES30.GL_FRAGMENT_SHADER, R.raw.fs_base_model_uv);
         // Create empty OpenGL Program.
         glProgram = ShaderUtils.createProgram(vertexShaderId, fragmentShaderId);
         // get handle to vertex shader's vPosition member
         glPositionParam = GLES30.glGetAttribLocation(glProgram, "a_Position");
         glNormalParam = GLES30.glGetAttribLocation(glProgram, "a_Normal");
-        // get handle to fragment shader's vColor member
+        // get handle to fragment shader's texture member
         glTextureParam = GLES30.glGetAttribLocation(glProgram, "a_UV");
 
-        glLightPosParam = GLES30.glGetAttribLocation(glProgram, "uLightPos");
-        glLightColParam = GLES30.glGetAttribLocation(glProgram, "uLightCol");
         // get handle to shape's transformation matrix
         glMVPMatrixParam = GLES30.glGetUniformLocation(glProgram, "u_MVPMatrix");
-        glMVMatrixParam = GLES30.glGetUniformLocation(glProgram, "u_MVMatrix");
+        glModelMatrixParam = GLES30.glGetUniformLocation(glProgram, "u_MVMatrix");
+        glLightPosParam = GLES30.glGetUniformLocation(glProgram, "a_Light_Pos");
+        glLightColParam = GLES30.glGetUniformLocation(glProgram, "a_Light_Col");
 
         // Load and parse Blander object.
         this.prepareData(context);
@@ -108,7 +105,7 @@ public class SpaceshipHunter implements DynamicModel {
 
     @Override
     public float[] getPosition() {
-        return new float[] {translateX/800, translateY/800, translateZ/800};
+        return new float[] {translationX/800, translationY/800, translationZ/800};
     }
 
     @Override
@@ -119,46 +116,52 @@ public class SpaceshipHunter implements DynamicModel {
     @Override
     public void moveByCamera(@Nullable float[] forwardVec, float speed) {
         if (null != forwardVec) {
-            translateX -= forwardVec[0] * speed;
-            translateY -= forwardVec[1] * speed;
-            translateZ -= forwardVec[2] * speed;
+            translationX -= forwardVec[0] * speed;
+            translationY -= forwardVec[1] * speed;
+            translationZ -= forwardVec[2] * speed;
         }
+        rotation += 0.4f;
     }
 
-    private void prepareModel() {
+    private void prepareModel(float[] globalLightPosition, float[] globalLightColor) {
         Matrix.setIdentityM(translationMatrix, 0);
-        Matrix.translateM(translationMatrix, 0, translateX, translateY, translateZ);
+        Matrix.translateM(translationMatrix, 0, translationX, translationY, translationZ);
         Matrix.setIdentityM(rotationMatrix, 0);
         Matrix.rotateM(rotationMatrix, 0, 180, 0f, 1f, 0f);
+        Matrix.rotateM(rotationMatrix, 0, rotation, 1f, 0f, 0f);
         Matrix.setIdentityM(mModelMatrix, 0);
         Matrix.multiplyMM(mModelMatrix, 0, rotationMatrix, 0, mModelMatrix, 0);
         Matrix.multiplyMM(mModelMatrix, 0, translationMatrix, 0, mModelMatrix, 0);
+
+        lightPosition[0] = globalLightPosition[0] - translationX;
+        lightPosition[1] = globalLightPosition[1] - translationY;
+        lightPosition[2] = globalLightPosition[2] - translationZ;
+
+        lightColor[0] = globalLightColor[0];
+        lightColor[1] = globalLightColor[1];
+        lightColor[2] = globalLightColor[2];
     }
 
     /**
      * Encapsulates the OpenGL ES instructions for drawing this shape.
      */
     @Override
-    public void draw(float[] mVPMatrix, float[] mViewMatrix) {
+    public void draw(float[] mVPMatrix, float[] mViewMatrix, float[] globalLightPosition, float[] globalLightColor) {
         // Add program to OpenGL environment
         GLES30.glUseProgram(glProgram);
-
-        // Translation, scaling and rotation of the model.
-        prepareModel();
 
         // Multiply the MVP and the model matrices.
         Matrix.setIdentityM(mMVPMatrix, 0);
         Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix,0, mModelMatrix,0);
         // Past a ModelViewProjection matrix to the shader parameter
         GLES30.glUniformMatrix4fv(glMVPMatrixParam, 1, false, mMVPMatrix, 0);
-        // Multiply the View matrix and the model matrices.
-        Matrix.multiplyMM(mModelMatrix, 0, mViewMatrix,0, mModelMatrix,0);
         // Past a ModelView matrix to the shader parameter
-        GLES30.glUniformMatrix4fv(glMVMatrixParam, 1, false, mModelMatrix, 0);
-        // Past a local light position matrix to the shader parameter
+        GLES30.glUniformMatrix4fv(glModelMatrixParam, 1, false, mModelMatrix, 0);
         GLES30.glUniform3fv(glLightPosParam, 1, lightPosition, 0);
-        // Past a local light color matrix to the shader parameter
-        GLES30.glUniform4fv(glLightColParam, 1, lightColor, 0);
+        GLES30.glUniform3fv(glLightColParam, 1, lightColor, 0);
+
+        // Translation, scaling and rotation of the model.
+        prepareModel(globalLightPosition, globalLightColor);
 
         // Enable vertex array
         GLES30.glEnableVertexAttribArray(glPositionParam);
@@ -216,7 +219,7 @@ public class SpaceshipHunter implements DynamicModel {
                     // the vertex buffer objects and vertex array objects for OpenGL
                     corpus_vrtx = (ObjData.getVertices(material));
                     corpus_texr = (ObjData.getTexCoords(material, 2));
-                    corpus_norm = (ObjData.getVertices(material));
+                    corpus_norm = (ObjData.getNormals(material));
                     IntBuffer intIndices = ObjData.getFaceVertexIndices(material);
                     ShortBuffer indices = ByteBuffer.allocateDirect(intIndices.limit() * 2).order(ByteOrder.nativeOrder()).asShortBuffer();
                     while (intIndices.hasRemaining()) indices.put((short) intIndices.get());
